@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 const translations: Record<string, any> = {
@@ -245,6 +243,8 @@ const translations: Record<string, any> = {
         narration: "Narration",
         readNarration: "Read narration aloud",
         visuals: "Visuals Prompt",
+        confirmPrompt: "Confirm Prompt",
+        editPrompt: "Edit Prompt",
         approveScene: "Approve",
         approved: "Approved",
         generateSceneVideo: "Generate Video",
@@ -550,6 +550,8 @@ const translations: Record<string, any> = {
         narration: "گویندگی",
         readNarration: "خواندن گویندگی",
         visuals: "دستور بصری",
+        confirmPrompt: "تایید دستور",
+        editPrompt: "ویرایش دستور",
         approveScene: "تایید",
         approved: "تایید شده",
         generateSceneVideo: "تولید ویدیو",
@@ -641,7 +643,7 @@ const getNested = (obj: any, path: string): any => {
 };
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('fa');
 
   const t = (key: string): any => {
     const translation = getNested(translations[language], key);
@@ -729,6 +731,7 @@ export interface VideoScene {
     imageUrl: string | null;
     isGenerating: boolean;
     isApproved: boolean;
+    isConfirmed: boolean;
     error: string | null;
 }
 

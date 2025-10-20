@@ -61,8 +61,8 @@ interface SiteSelectorProps {
     onUseSuggestedGoal: (goal: string) => void;
 }
 
-const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'onFindTrees' | 'isLoading' | 'mode' | 'setMode' | 'locationsInput' | 'setLocationsInput' | 'coords' | 'suggestedGoals' | 'isSuggestingGoals' | 'onUseSuggestedGoal'>> = 
-({ onFindLocations, onFindTrees, isLoading, mode, setMode, locationsInput, setLocationsInput, coords, suggestedGoals, isSuggestingGoals, onUseSuggestedGoal }) => {
+const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'isLoading' | 'mode' | 'setMode' | 'locationsInput' | 'setLocationsInput' | 'coords' | 'suggestedGoals' | 'isSuggestingGoals' | 'onUseSuggestedGoal'>> = 
+({ onFindLocations, isLoading, mode, setMode, locationsInput, setLocationsInput, coords, suggestedGoals, isSuggestingGoals, onUseSuggestedGoal }) => {
     const { t } = useLanguage();
     
     const handleLocationsSubmit = (e: React.FormEvent) => {
@@ -72,15 +72,6 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'on
             return;
         }
         onFindLocations(locationsInput);
-    };
-    
-    const handleTreesSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!coords) {
-            alert(t('siteSelector.validationErrorCoords'));
-            return;
-        }
-        onFindTrees(coords);
     };
 
     return (
@@ -117,8 +108,7 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'on
                 </form>
             ) : (
                  <div className="space-y-6">
-                    <form onSubmit={handleTreesSubmit}>
-                        <div className="text-center p-4 bg-slate-800/50 rounded-md border border-slate-700">
+                    <div className="text-center p-4 bg-slate-800/50 rounded-md border border-slate-700">
                         <p className="text-sm text-gray-400">{t('siteSelector.selectOnMap')}</p>
                         {coords && (
                             <div className="mt-3 text-left text-xs bg-slate-700 p-2 rounded-md">
@@ -127,14 +117,7 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'on
                                 <p><span className="font-semibold text-gray-300">{t('siteSelector.longitude')}:</span> {coords.lng.toFixed(6)}</p>
                             </div>
                         )}
-                        </div>
-                        <div>
-                            <button type="submit" disabled={isLoading || !coords} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 via-purple-700 to-pink-700 hover:from-blue-700 hover:to-pink-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all">
-                                {isLoading ? t('siteSelector.generating') : t(`siteSelector.trees.button`)}
-                            </button>
-                        </div>
-                    </form>
-
+                    </div>
                      { (isSuggestingGoals || suggestedGoals.length > 0) && (
                         <div className="pt-6 border-t border-slate-700/50 space-y-4 animate-fade-in">
                             <h4 className="font-semibold text-white">{t('siteSelector.suggestedGoals.title')}</h4>
@@ -292,12 +275,13 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 if (props.mode === 'trees' && e.latLng) {
                     const latLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
                     props.setCoords(latLng);
+                    props.onFindTrees(latLng);
                 }
             });
 
             setMap(newMap);
         }
-    }, [mapRef, map, props.mode, props.setCoords, isMapScriptLoaded]);
+    }, [mapRef, map, props.mode, props.setCoords, isMapScriptLoaded, props.onFindTrees]);
 
     useEffect(() => {
         if (!map) return;

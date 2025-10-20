@@ -17,6 +17,7 @@ interface VideoGeneratorProps {
     scenes: VideoScene[];
     onSceneChange: (index: number, newDescription: string) => void;
     onApproveScene: (index: number, isApproved: boolean) => void;
+    onConfirmScene: (index: number, isConfirmed: boolean) => void;
     onGenerateScript: () => void;
     isScriptLoading: boolean;
     onGenerateSceneVideo: (sceneIndex: number, isAlternative?: boolean) => void;
@@ -206,13 +207,14 @@ const SceneItem: React.FC<{
     scene: VideoScene;
     index: number;
     onSceneChange: (index: number, newDescription: string) => void;
+    onConfirmScene: (index: number, isConfirmed: boolean) => void;
     onGenerateSceneVideo: (sceneIndex: number, isAlternative?: boolean) => void;
     onGenerateSceneImage: (sceneIndex: number) => void;
     onApproveScene: (index: number, isApproved: boolean) => void;
     isQuotaExhausted: boolean;
     image: string | null;
     onAskGoogleBaba: (prompt?: string) => void;
-}> = ({ scene, index, onSceneChange, onGenerateSceneVideo, onGenerateSceneImage, onApproveScene, isQuotaExhausted, image, onAskGoogleBaba }) => {
+}> = ({ scene, index, onSceneChange, onConfirmScene, onGenerateSceneVideo, onGenerateSceneImage, onApproveScene, isQuotaExhausted, image, onAskGoogleBaba }) => {
     const { t, language } = useLanguage();
     const [babaPrompt, setBabaPrompt] = useState('');
     
@@ -251,7 +253,7 @@ const SceneItem: React.FC<{
                     <h4 className="text-lg font-bold text-white">{t('videoGenerator.scene')} {index + 1}</h4>
                     <button 
                         onClick={() => onApproveScene(index, !scene.isApproved)} 
-                        disabled={!hasMedia}
+                        disabled={!hasMedia || scene.isGenerating}
                         className={`px-3 py-1 text-sm font-semibold rounded-full transition-colors flex items-center justify-center ${scene.isApproved ? 'bg-green-500 text-white' : 'bg-slate-700 hover:bg-slate-600 text-gray-300'} disabled:bg-slate-800 disabled:text-gray-500 disabled:cursor-not-allowed`}
                     >
                         {scene.isApproved && (
@@ -274,13 +276,23 @@ const SceneItem: React.FC<{
                     <p id={`narration-${index}`} className="mt-1 text-gray-300 bg-slate-800 p-2 rounded-md text-sm">{scene.narration}</p>
                 </div>
                 <div>
-                    <label htmlFor={`description-${index}`} className="block text-sm font-medium text-gray-400">{t('videoGenerator.visuals')}</label>
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor={`description-${index}`} className="block text-sm font-medium text-gray-400">{t('videoGenerator.visuals')}</label>
+                        <button 
+                            onClick={() => onConfirmScene(index, !scene.isConfirmed)} 
+                            disabled={scene.isGenerating}
+                            className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${scene.isConfirmed ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'bg-pink-600 hover:bg-pink-700 text-white'}`}
+                        >
+                            {scene.isConfirmed ? t('videoGenerator.editPrompt') : t('videoGenerator.confirmPrompt')}
+                        </button>
+                    </div>
                     <textarea 
                         id={`description-${index}`} 
                         rows={4} 
                         value={scene.description} 
                         onChange={(e) => onSceneChange(index, e.target.value)}
-                        className="mt-1 block w-full bg-slate-800 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white" 
+                        className="block w-full bg-slate-800 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white disabled:bg-slate-800/50 disabled:text-gray-400" 
+                        disabled={scene.isConfirmed || scene.isGenerating}
                     />
                 </div>
             </div>
@@ -343,10 +355,10 @@ const SceneItem: React.FC<{
                     )}
                     
                     <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => onGenerateSceneVideo(index)} disabled={scene.isGenerating || isQuotaExhausted} className="w-full text-center text-sm bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold py-2 px-3 rounded-md hover:from-blue-700 hover:to-purple-800 transition-all disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed">
+                        <button onClick={() => onGenerateSceneVideo(index)} disabled={!scene.isConfirmed || scene.isGenerating || isQuotaExhausted} className="w-full text-center text-sm bg-gradient-to-r from-blue-600 to-purple-700 text-white font-semibold py-2 px-3 rounded-md hover:from-blue-700 hover:to-purple-800 transition-all disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed">
                             {hasVideo ? t('videoGenerator.regenerateScene') : t('videoGenerator.generateSceneVideo')}
                         </button>
-                        <button onClick={() => onGenerateSceneImage(index)} disabled={scene.isGenerating} className="w-full text-center text-sm bg-slate-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-slate-500 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
+                        <button onClick={() => onGenerateSceneImage(index)} disabled={!scene.isConfirmed || scene.isGenerating} className="w-full text-center text-sm bg-slate-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-slate-500 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
                             {scene.imageUrl ? t('videoGenerator.regenerateSceneImage') : t('videoGenerator.generateSceneImage')}
                         </button>
                     </div>
@@ -432,6 +444,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = (props) => {
                                         scene={scene}
                                         index={index}
                                         onSceneChange={props.onSceneChange}
+                                        onConfirmScene={props.onConfirmScene}
                                         onGenerateSceneVideo={props.onGenerateSceneVideo}
                                         onGenerateSceneImage={props.onGenerateSceneImage}
                                         onApproveScene={props.onApproveScene}
