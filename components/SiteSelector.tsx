@@ -1,12 +1,48 @@
-// FIX: Corrected the triple-slash directive to properly reference Google Maps types.
-// The type reference should be 'google.maps', which resolves issues with the 'google' namespace.
-/// <reference types="google.maps" />
+// FIX: The google.maps types are not available in this build environment. To resolve compilation errors, 
+// the failing triple-slash directive is removed and a minimal set of local type declarations for the Google Maps API is provided below.
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, PlantingSite, SuitableTree, Coords } from '../types';
 import { marked } from 'marked';
 
 type Mode = 'locations' | 'trees';
+
+// @ts-ignore
+declare global { 
+  interface Window { 
+    initMapSiteSelector: () => void;
+    google: typeof google;
+  } 
+}
+
+// Minimal type declarations for Google Maps to fix compilation errors when types are not found.
+declare namespace google {
+    namespace maps {
+        type MapTypeStyle = any;
+        class Map {
+            constructor(mapDiv: Element | null, opts?: any);
+            addListener(eventName: string, handler: (...args: any[]) => void): any;
+            fitBounds(bounds: any): void;
+            panTo(latLng: any): void;
+            setZoom(zoom: number): void;
+        }
+        class Marker {
+            constructor(opts?: any);
+            setMap(map: Map | null): void;
+            addListener(eventName: string, handler: (...args: any[]) => void): any;
+        }
+        type MapMouseEvent = { latLng: { lat: () => number, lng: () => number } | null };
+        class LatLngBounds {
+            constructor();
+            extend(point: any): void;
+        }
+        class InfoWindow {
+            constructor(opts?: any);
+            open(map: Map, anchor?: any): void;
+        }
+    }
+}
+
 
 interface SiteSelectorProps {
     onFindLocations: (description: string) => void;
@@ -201,9 +237,49 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const [map, setMap] = useState<google.maps.Map | null>(null);
     const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+    const [isMapScriptLoaded, setIsMapScriptLoaded] = useState(!!(window.google && window.google.maps));
+
+    useEffect(() => {
+        if (isMapScriptLoaded) {
+            return;
+        }
+
+        const scriptId = 'google-maps-script';
+        if (document.getElementById(scriptId)) {
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.id = scriptId;
+        // IMPORTANT: Use process.env.API_KEY to load the script
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.API_KEY}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        
+        const callbackName = 'initMapSiteSelector';
+        window[callbackName] = () => {
+            setIsMapScriptLoaded(true);
+            delete (window as any)[callbackName];
+        };
+        script.src += `&callback=${callbackName}`;
+
+        script.onerror = () => {
+            console.error("Google Maps script failed to load.");
+            delete (window as any)[callbackName];
+        };
+
+        document.head.appendChild(script);
+
+        return () => {
+            const scriptElement = document.getElementById(scriptId);
+            if (scriptElement) {
+                scriptElement.remove();
+            }
+        };
+    }, [isMapScriptLoaded]);
     
     useEffect(() => {
-        if (mapRef.current && !map && window.google) {
+        if (mapRef.current && !map && isMapScriptLoaded) {
             const newMap = new window.google.maps.Map(mapRef.current, {
                 center: { lat: 32, lng: 53 }, // Center of Iran
                 zoom: 5,
@@ -221,7 +297,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
 
             setMap(newMap);
         }
-    }, [mapRef, map, props.mode, props.setCoords]);
+    }, [mapRef, map, props.mode, props.setCoords, isMapScriptLoaded]);
 
     useEffect(() => {
         if (!map) return;
