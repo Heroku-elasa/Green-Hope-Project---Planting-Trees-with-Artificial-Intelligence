@@ -3,25 +3,11 @@ import React, { createContext, useState, useContext, ReactNode, useCallback, use
 // Basic Types
 export type Language = 'en' | 'fa' | 'ar';
 
-export interface GroundingChunk {
-    web?: {
-        uri: string;
-        title: string;
-    };
-    maps?: {
-        uri: string;
-        title: string;
-        placeAnswerSources?: {
-            reviewSnippets: {
-                uri: string;
-                text: string;
-                author: string;
-                rating: number;
-            }[];
-        }[];
-    };
+export interface GroundingSource {
+    uri: string;
+    title: string;
+    type: 'web' | 'maps';
 }
-
 
 // Green Hope App Types
 export interface PlantingSuggestion {
@@ -37,14 +23,14 @@ export interface PlantingSuggestion {
         protectionDuration: string;
     }[];
     summary: string;
-    grounding?: GroundingChunk[];
+    sources?: GroundingSource[];
 }
 
 export interface VegetationAnalysis {
-    coveragePercentage: number;
+    coveragePercentage: number; // Will now be used for qualitative description rather than a strict number from the model.
     reforestationNeed: 'Low' | 'Medium' | 'High';
     analysis: string;
-    grounding?: GroundingChunk[];
+    sources?: GroundingSource[];
 }
 
 export interface RiskAnalysis {
@@ -52,13 +38,16 @@ export interface RiskAnalysis {
         name:string;
         severity: 'Low' | 'Medium' | 'High';
         explanation: string;
-        location?: {
-            lat: number;
-            lng: number;
-        };
     }[];
     overallRiskScore: number;
-    grounding?: GroundingChunk[];
+    sources?: GroundingSource[];
+}
+
+export interface FullAnalysis {
+    plantingSuggestion: Omit<PlantingSuggestion, 'sources'>;
+    vegetationAnalysis: Omit<VegetationAnalysis, 'sources'>;
+    riskAnalysis: Omit<RiskAnalysis, 'sources'>;
+    sources?: GroundingSource[];
 }
 
 export interface CrowdfundingCampaign {
@@ -74,11 +63,28 @@ export interface PlantingArea {
     reason: string;
 }
 
+export interface ReforestationArea {
+    location: {
+        lat: number;
+        lng: number;
+    };
+    need: 'High' | 'Medium' | 'Low';
+    reason: string;
+}
+
 export interface HomePlant {
     name: string;
     type: string;
     careInstructions: string;
     suitableFor: string;
+}
+
+export interface WeatherData {
+    temperature: number;
+    precipitationProbability: number;
+    windSpeed: number;
+    summary: string;
+    sources?: GroundingSource[];
 }
 
 
@@ -91,7 +97,6 @@ const translations: Record<Language, Record<string, any>> = {
         tabs: {
             reforestation: 'تحلیل جنگل‌کاری',
             homeGardening: 'باغبانی خانگی',
-            startupShowcase: 'نمایش استارتاپ‌ها',
         },
         hero: {
             title: 'آینده‌ای سبزتر، یک درخت در هر زمان',
@@ -101,7 +106,6 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'برای شروع، روی نقشه کلیک کنید یا مکانی را برای تحلیل جستجو نمایید.',
             selectedLocation: 'مکان انتخاب شده:',
             analyzeLocation: 'انجام تحلیل کامل',
-            suggestForToday: 'پیشنهاد کاشت برای امروز',
             loadingMap: 'در حال بارگذاری نقشه...',
             numberOfTreesLabel: 'تعداد درخت برای تحلیل',
             reforestationGoalLabel: 'هدف کلی جنگل‌کاری',
@@ -112,28 +116,25 @@ const translations: Record<Language, Record<string, any>> = {
             latLabel: 'عرض جغرافیایی',
             lngLabel: 'طول جغرافیایی',
             setLocationButton: 'تنظیم مکان',
-            findAreas: 'یافتن مناطق مناسب',
+            findAreas: 'یافتن مناطق مناسب کاشت',
             findAreasDescription: 'یافتن چندین نقطه کاشت مناسب در نمای فعلی نقشه.',
             areaSuggestion: 'منطقه پیشنهادی',
             clickForDetails: 'روی یک نشانگر کلیک کنید تا برای تحلیل دقیق انتخاب شود.',
-            selectForAnalysis: 'انتخاب برای تحلیل',
-            selectAreaOnMap: 'انتخاب منطقه',
-            analyzeSelection: 'تحلیل منطقه انتخاب شده؟',
-            analyze: 'تحلیل',
-            locateMe: 'مکان‌یابی من',
-            currentTime: 'زمان فعلی',
+            useGroundingTitle: 'تحلیل به‌روز',
+            useGroundingDesc: 'برای داده‌های جدید از جستجوی گوگل استفاده می‌کند',
+            showNeeds: 'نمایش نیاز به جنگل‌کاری',
+            hideNeeds: 'پنهان کردن نیاز به جنگل‌کاری',
+            findingNeeds: 'در حال یافتن مناطق بحرانی...',
         },
         results: {
             suggestionTitle: 'پیشنهاد کاشت درخت',
             vegetationTitle: 'تحلیل پوشش گیاهی',
             riskTitle: 'تحلیل ریسک‌های زیست‌محیطی',
-            vegetationTooltip: 'این تحلیل درصد پوشش گیاهی فعلی و نیاز به کاشت درختان جدید را ارزیابی می‌کند.',
-            riskTooltip: 'این تحلیل خطرات بالقوه مانند خشکسالی، آتش‌سوزی یا مشکلات قانونی مرتبط با پروژه شما را شناسایی می‌کند.',
             species: 'گونه‌های مناسب',
             reason: 'دلیل',
             cost: 'هزینه تخمین زده شده',
             summary: 'خلاصه',
-            coverage: 'درصد پوشش گیاهی',
+            coverage: 'توصیف پوشش گیاهی',
             need: 'نیاز به جنگل‌کاری مجدد',
             analysis: 'تحلیل',
             riskName: 'ریسک',
@@ -147,6 +148,13 @@ const translations: Record<Language, Record<string, any>> = {
             wateringNeeds: 'نیاز آبیاری اولیه',
             protectionDuration: 'مدت زمان محافظت',
             sources: 'منابع',
+        },
+        weather: {
+            title: 'آب و هوای زنده',
+            temperature: 'دما',
+            precipitation: 'احتمال بارش',
+            windSpeed: 'سرعت باد',
+            refresh: 'تازه‌سازی',
         },
         campaign: {
             title: 'کمپین شما آماده است!',
@@ -170,42 +178,8 @@ const translations: Record<Language, Record<string, any>> = {
             careInstructions: 'دستورالعمل مراقبت',
             suitableFor: 'مناسب برای',
         },
-        startupShowcase: {
-            title: 'نمایش استارتاپ‌های نوآور',
-            description: 'با استارتاپ‌های پیشرو در زمینه فناوری سبز و پایداری آشنا شوید.',
-            learnMore: 'بیشتر بدانید',
-            startups: [
-                {
-                    name: 'پایش کربن',
-                    description: 'استفاده از ماهواره و هوش مصنوعی برای نظارت دقیق بر جنگل‌های جهان و اندازه‌گیری جذب کربن.',
-                    icon: 'fa-satellite-dish',
-                    link: '#',
-                },
-                {
-                    name: 'آبیاری هوشمند',
-                    description: 'سیستم‌های آبیاری مبتنی بر اینترنت اشیاء که مصرف آب در کشاورزی و جنگل‌کاری را تا ۵۰٪ کاهش می‌دهد.',
-                    icon: 'fa-water',
-                    link: '#',
-                },
-                {
-                    name: 'پهپادهای بذرکار',
-                    description: 'ناوگانی از پهپادهای خودکار که قادر به کاشت سریع هزاران بذر در مناطق صعب‌العبور هستند.',
-                    icon: 'fa-helicopter',
-                    link: '#',
-                },
-            ]
-        },
         footer: {
             copyright: '© ۲۰۲۴ پروژه امید سبز. تمام حقوق محفوظ است.',
-            adminLink: 'پنل مدیریت',
-        },
-        admin: {
-            title: 'پنل مدیریت',
-            featureManagement: 'مدیریت ویژگی‌ها',
-            googleDateFeature: 'ویژگی هوش مصنوعی Google Date',
-            googleDateDescription: 'هنگامی که فعال باشد، این ویژگی از داده‌های Google برای بهبود تحلیل‌های زمانی استفاده می‌کند.',
-            enabled: 'فعال',
-            disabled: 'غیرفعال',
         },
         loading: 'در حال تحلیل...',
         error: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
@@ -222,17 +196,16 @@ const translations: Record<Language, Record<string, any>> = {
             manualInputPrompt: 'نقشه بارگذاری نشد. می‌توانید مختصات را به صورت دستی وارد کنید.',
             invalidLat: 'عرض جغرافیایی باید بین -۹۰ و ۹۰ باشد.',
             invalidLng: 'طول جغرافیایی باید بین -۱۸۰ و ۱۸۰ باشد.',
-            geolocationNotSupported: 'مکان‌یابی توسط مرورگر شما پشتیبانی نمی‌شود.',
-            geolocationPermissionDenied: 'دسترسی به موقعیت مکانی رد شد. لطفاً آن را در تنظیمات مرورگر خود فعال کنید.',
-            geolocationPositionUnavailable: 'موقعیت مکانی شما قابل تشخیص نیست.',
-            geolocationTimeout: 'درخواست برای دریافت موقعیت مکانی کاربر منقضی شد.',
         },
         mapLayers: {
             title: 'لایه‌های نقشه',
             satellite: 'ماهواره',
             terrain: 'عوارض زمین',
             roadmap: 'جاده',
-            humanitarian: 'بشردوستانه',
+        },
+        mapDataLayers: {
+            title: "لایه های داده",
+            gfc: "هشدارهای تغییرات جهانی جنگل"
         },
         mapLegend: {
             title: 'راهنما',
@@ -254,7 +227,6 @@ const translations: Record<Language, Record<string, any>> = {
         tabs: {
             reforestation: 'Reforestation Analysis',
             homeGardening: 'Home Gardening',
-            startupShowcase: 'Startup Showcase',
         },
         hero: {
             title: 'A Greener Future, One Tree at a Time',
@@ -264,7 +236,6 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'Click on the map or search for a location to begin analysis.',
             selectedLocation: 'Selected Location:',
             analyzeLocation: 'Perform Full Analysis',
-            suggestForToday: 'Suggest for Today',
             loadingMap: 'Loading Map...',
             numberOfTreesLabel: 'Number of Trees for Analysis',
             reforestationGoalLabel: 'Overall Reforestation Goal',
@@ -275,28 +246,25 @@ const translations: Record<Language, Record<string, any>> = {
             latLabel: 'Latitude',
             lngLabel: 'Longitude',
             setLocationButton: 'Set Location',
-            findAreas: 'Find Suitable Areas',
+            findAreas: 'Find Suitable Planting Areas',
             findAreasDescription: 'Find multiple suitable planting spots within the current map view.',
             areaSuggestion: 'Suggested Area',
             clickForDetails: 'Click a marker to select it for detailed analysis.',
-            selectForAnalysis: 'Select for Analysis',
-            selectAreaOnMap: 'Select Area',
-            analyzeSelection: 'Analyze selected area?',
-            analyze: 'Analyze',
-            locateMe: 'Find My Location',
-            currentTime: 'Current Time',
+            useGroundingTitle: 'Up-to-date Analysis',
+            useGroundingDesc: 'Uses Google Search for recent data',
+            showNeeds: 'Show Reforestation Needs',
+            hideNeeds: 'Hide Reforestation Needs',
+            findingNeeds: 'Finding critical areas...',
         },
         results: {
             suggestionTitle: 'Tree Planting Suggestion',
             vegetationTitle: 'Vegetation Analysis',
             riskTitle: 'Environmental Risk Analysis',
-            vegetationTooltip: 'This analysis assesses the current percentage of plant cover and the need for new tree planting.',
-            riskTooltip: 'This analysis identifies potential hazards like droughts, wildfires, or legal issues related to your project.',
             species: 'Suitable Species',
             reason: 'Reason',
             cost: 'Estimated Cost',
             summary: 'Summary',
-            coverage: 'Vegetation Coverage',
+            coverage: 'Vegetation Description',
             need: 'Reforestation Need',
             analysis: 'Analysis',
             riskName: 'Risk',
@@ -310,6 +278,13 @@ const translations: Record<Language, Record<string, any>> = {
             wateringNeeds: 'Initial Watering Needs',
             protectionDuration: 'Protection Duration',
             sources: 'Sources',
+        },
+        weather: {
+            title: 'Live Weather',
+            temperature: 'Temperature',
+            precipitation: 'Precipitation',
+            windSpeed: 'Wind Speed',
+            refresh: 'Refresh',
         },
         campaign: {
             title: 'Your Campaign is Ready!',
@@ -333,42 +308,8 @@ const translations: Record<Language, Record<string, any>> = {
             careInstructions: 'Care Instructions',
             suitableFor: 'Best For',
         },
-        startupShowcase: {
-            title: 'Innovative Startup Showcase',
-            description: 'Discover leading startups at the forefront of green technology and sustainability.',
-            learnMore: 'Learn More',
-            startups: [
-                {
-                    name: 'CarbonTrace',
-                    description: 'Utilizing satellite imagery and AI to accurately monitor the world\'s forests and measure carbon sequestration.',
-                    icon: 'fa-satellite-dish',
-                    link: '#',
-                },
-                {
-                    name: 'AquaSmart',
-                    description: 'IoT-based irrigation systems that reduce water consumption in agriculture and reforestation by up to 50%.',
-                    icon: 'fa-water',
-                    link: '#',
-                },
-                {
-                    name: 'DroneSeed',
-                    description: 'A fleet of autonomous drones capable of rapidly planting thousands of tree seeds in hard-to-reach areas.',
-                    icon: 'fa-helicopter',
-                    link: '#',
-                },
-            ]
-        },
         footer: {
             copyright: '© 2024 Green Hope Initiative. All rights reserved.',
-            adminLink: 'Admin Panel',
-        },
-        admin: {
-            title: 'Admin Panel',
-            featureManagement: 'Feature Management',
-            googleDateFeature: 'Google Date AI Feature',
-            googleDateDescription: 'When enabled, this feature utilizes Google date data to enhance temporal analyses.',
-            enabled: 'Enabled',
-            disabled: 'Disabled',
         },
         loading: 'Analyzing...',
         error: 'An error occurred. Please try again.',
@@ -385,17 +326,16 @@ const translations: Record<Language, Record<string, any>> = {
             manualInputPrompt: 'Map failed to load. You can enter coordinates manually.',
             invalidLat: 'Latitude must be between -90 and 90.',
             invalidLng: 'Longitude must be between -180 and 180.',
-            geolocationNotSupported: 'Geolocation is not supported by your browser.',
-            geolocationPermissionDenied: 'Geolocation permission was denied. Please enable it in your browser settings.',
-            geolocationPositionUnavailable: 'Could not determine your location.',
-            geolocationTimeout: 'Request to get user location timed out.',
         },
         mapLayers: {
             title: 'Map Layers',
             satellite: 'Satellite',
             terrain: 'Terrain',
             roadmap: 'Roadmap',
-            humanitarian: 'Humanitarian',
+        },
+        mapDataLayers: {
+            title: "Data Layers",
+            gfc: "Global Forest Change Alerts"
         },
         mapLegend: {
             title: 'Legend',
@@ -417,7 +357,6 @@ const translations: Record<Language, Record<string, any>> = {
         tabs: {
             reforestation: 'تحليل إعادة التحريج',
             homeGardening: 'البستنة المنزلية',
-            startupShowcase: 'عرض الشركات الناشئة',
         },
         hero: {
             title: 'مستقبل أكثر اخضرارًا، شجرة في كل مرة',
@@ -427,7 +366,6 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'انقر على الخريطة أو ابحث عن موقع لبدء التحليل.',
             selectedLocation: 'الموقع المحدد:',
             analyzeLocation: 'إجراء تحليل كامل',
-            suggestForToday: 'اقتراح زراعة لليوم',
             loadingMap: 'جاري تحميل الخريطة...',
             numberOfTreesLabel: 'عدد الأشجار للتحليل',
             reforestationGoalLabel: 'الهدف العام لإعادة التحريج',
@@ -438,28 +376,25 @@ const translations: Record<Language, Record<string, any>> = {
             latLabel: 'خط العرض',
             lngLabel: 'خط الطول',
             setLocationButton: 'تحديد الموقع',
-            findAreas: 'البحث عن مناطق مناسبة',
+            findAreas: 'البحث عن مناطق زراعة مناسبة',
             findAreasDescription: 'البحث عن عدة نقاط زراعة مناسبة ضمن عرض الخريطة الحالي.',
             areaSuggestion: 'منطقة مقترحة',
             clickForDetails: 'انقر على علامة لتحديدها للتحليل التفصيلي.',
-            selectForAnalysis: 'تحديد للتحليل',
-            selectAreaOnMap: 'تحديد منطقة',
-            analyzeSelection: 'تحليل المنطقة المحددة؟',
-            analyze: 'تحليل',
-            locateMe: 'تحديد موقعي',
-            currentTime: 'الوقت الحالي',
+            useGroundingTitle: 'تحليل محدّث',
+            useGroundingDesc: 'يستخدم بحث جوجل للحصول على بيانات حديثة',
+            showNeeds: 'إظهار مناطق الحاجة للتحريج',
+            hideNeeds: 'إخفاء مناطق الحاجة للتحريج',
+            findingNeeds: 'جاري البحث عن المناطق الحرجة...',
         },
         results: {
             suggestionTitle: 'اقتراح زراعة الأشجار',
             vegetationTitle: 'تحليل الغطاء النباتي',
             riskTitle: 'تحليل المخاطر البيئية',
-            vegetationTooltip: 'يقيّم هذا التحليل النسبة المئوية الحالية للغطاء النباتي والحاجة إلى زراعة أشجار جديدة.',
-            riskTooltip: 'يحدد هذا التحليل المخاطر المحتملة مثل الجفاف أو حرائق الغابات أو المشكلات القانونية المتعلقة بمشروعك.',
             species: 'الأنواع المناسبة',
             reason: 'السبب',
             cost: 'التكلفة التقديرية',
             summary: 'ملخص',
-            coverage: 'تغطية الغطاء النباتي',
+            coverage: 'وصف الغطاء النباتي',
             need: 'الحاجة إلى إعادة التحريج',
             analysis: 'تحليل',
             riskName: 'الخطر',
@@ -472,7 +407,14 @@ const translations: Record<Language, Record<string, any>> = {
             bestPlantingTime: 'أفضل وقت للزراعة',
             wateringNeeds: 'احتياجات الري الأولية',
             protectionDuration: 'مدة الحماية',
-            sources: 'المصادر',
+            sources: 'مصادر',
+        },
+        weather: {
+            title: 'الطقس المباشر',
+            temperature: 'درجة الحرارة',
+            precipitation: 'احتمال هطول الأمطار',
+            windSpeed: 'سرعة الرياح',
+            refresh: 'تحديث',
         },
         campaign: {
             title: 'حملتك جاهزة!',
@@ -496,42 +438,8 @@ const translations: Record<Language, Record<string, any>> = {
             careInstructions: 'تعليمات العناية',
             suitableFor: 'الأنسب لـ',
         },
-        startupShowcase: {
-            title: 'عرض الشركات الناشئة المبتكرة',
-            description: 'اكتشف الشركات الناشئة الرائدة في طليعة التكنولوجيا الخضراء والاستدامة.',
-            learnMore: 'اعرف المزيد',
-            startups: [
-                {
-                    name: 'تتبع الكربون',
-                    description: 'استخدام صور الأقمار الصناعية والذكاء الاصطناعي لمراقبة غابات العالم بدقة وقياس عزل الكربون.',
-                    icon: 'fa-satellite-dish',
-                    link: '#',
-                },
-                {
-                    name: 'الري الذكي',
-                    description: 'أنظمة ري قائمة على إنترنت الأشياء تقلل من استهلاك المياه في الزراعة وإعادة التحريج بنسبة تصل إلى ٥٠٪.',
-                    icon: 'fa-water',
-                    link: '#',
-                },
-                {
-                    name: 'طائرات بدون طيار للبذور',
-                    description: 'أسطول من الطائرات بدون طيار ذاتية التشغيل قادرة على زراعة آلاف بذور الأشجار بسرعة في المناطق التي يصعب الوصول إليها.',
-                    icon: 'fa-helicopter',
-                    link: '#',
-                },
-            ]
-        },
         footer: {
             copyright: '© 2024 مبادرة الأمل الأخضر. جميع الحقوق محفوظة.',
-            adminLink: 'لوحة الإدارة',
-        },
-        admin: {
-            title: 'لوحة الإدارة',
-            featureManagement: 'إدارة الميزات',
-            googleDateFeature: 'ميزة الذكاء الاصطناعي لتاريخ Google',
-            googleDateDescription: 'عند التمكين، تستخدم هذه الميزة بيانات تاريخ Google لتحسين التحليلات الزمنية.',
-            enabled: 'ممكّن',
-            disabled: 'معطّل',
         },
         loading: 'جاري التحليل...',
         error: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
@@ -548,17 +456,16 @@ const translations: Record<Language, Record<string, any>> = {
             manualInputPrompt: 'فشل تحميل الخريطة. يمكنك إدخال الإحداثيات يدويًا.',
             invalidLat: 'يجب أن يكون خط العرض بين -٩٠ و ٩٠.',
             invalidLng: 'يجب أن يكون خط الطول بين -١٨٠ و ١٨٠.',
-            geolocationNotSupported: 'الموقع الجغرافي غير مدعوم من قبل متصفحك.',
-            geolocationPermissionDenied: 'تم رفض إذن تحديد الموقع الجغرافي. يرجى تمكينه في إعدادات المتصفح.',
-            geolocationPositionUnavailable: 'تعذر تحديد موقعك.',
-            geolocationTimeout: 'انتهت مهلة طلب الحصول على موقع المستخدم.',
         },
         mapLayers: {
             title: 'طبقات الخريطة',
             satellite: 'قمر صناعي',
             terrain: 'تضاريس',
             roadmap: 'خريطة الطريق',
-            humanitarian: 'إنسانية',
+        },
+        mapDataLayers: {
+            title: "طبقات البيانات",
+            gfc: "تنبيهات تغير الغابات العالمي"
         },
         mapLegend: {
             title: 'دليل',
@@ -580,8 +487,6 @@ interface LanguageContextType {
   setLanguage: (language: Language) => void;
   t: (key: string, replacements?: Record<string, string | number>) => any;
   dir: 'ltr' | 'rtl';
-  currencySymbol: string;
-  currencyCode: string;
 }
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
@@ -626,10 +531,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
 
     if (typeof result === 'string' && replacements) {
-        // FIX: Explicitly type `replacedString` as `string` upon declaration.
-        // This prevents a TypeScript issue where the type of `replacedString` was
-        // inferred as `never` inside the loop during reassignment.
-        let replacedString: string = result;
+        let replacedString = result;
         for (const placeholder in replacements) {
             replacedString = replacedString.replace(`{${placeholder}}`, String(replacements[placeholder]));
         }
@@ -639,17 +541,9 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     return result || key;
   }, [language]);
 
-  const currencyInfo: Record<Language, { symbol: string, code: string }> = {
-      fa: { symbol: 'تومان', code: 'IRT' },
-      en: { symbol: '$', code: 'USD' },
-      ar: { symbol: 'ر.س', code: 'SAR' }, // Saudi Riyal
-  };
-
-  const currencySymbol = currencyInfo[language].symbol;
-  const currencyCode = currencyInfo[language].code;
   const dir = language === 'fa' || language === 'ar' ? 'rtl' : 'ltr';
 
-  return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t, dir, currencySymbol, currencyCode } }, children);
+  return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t, dir } }, children);
 };
 
 export const useLanguage = (): LanguageContextType => {

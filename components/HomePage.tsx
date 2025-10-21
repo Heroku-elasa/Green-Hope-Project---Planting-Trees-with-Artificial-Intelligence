@@ -1,96 +1,39 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useLanguage, PlantingSuggestion, VegetationAnalysis, RiskAnalysis, CrowdfundingCampaign, PlantingArea, GroundingChunk } from '../types';
+import { useLanguage, PlantingSuggestion, VegetationAnalysis, RiskAnalysis, CrowdfundingCampaign, PlantingArea, GroundingSource, WeatherData, ReforestationArea } from '../types';
 import { useToast } from './Toast';
 import HomeGardeningPage from './HomeGardeningPage';
-import { findPlantingAreas } from '../services/geminiService';
+import { findPlantingAreas, analyzePolygonArea, findReforestationAreas } from '../services/geminiService';
 import MapLegend from './MapLegend';
-import StartupShowcase from './StartupShowcase';
 
 declare const L: any; // Declare Leaflet global
 
-type LoadingState = 'full-analysis' | 'campaign' | 'areas' | 'today-suggestion' | false;
+type LoadingState = 'full-analysis' | 'campaign' | 'areas' | 'weather' | 'reforestation-need' | false;
 type Severity = 'Low' | 'Medium' | 'High';
-type ActiveView = 'reforestation' | 'homeGardening' | 'startupShowcase';
+type ActiveView = 'reforestation' | 'homeGardening';
 
 interface GreenHopePageProps {
-    onLocationSelect: (location: { lat: number, lng: number }) => void;
+    onLocationSelect: (location: { lat: number, lng: number }, analyze?: boolean) => void;
     selectedLocation: { lat: number, lng: number } | null;
     onFullAnalysis: () => void;
-    onTodaysSuggestion: () => void;
     onGenerateCampaign: () => void;
+    onFetchWeather: () => void;
     plantingSuggestion: PlantingSuggestion | null;
     vegetationAnalysis: VegetationAnalysis | null;
     riskAnalysis: RiskAnalysis | null;
     crowdfundingCampaign: CrowdfundingCampaign | null;
+    weatherData: WeatherData | null;
     isLoading: LoadingState;
+    setIsLoading: (loading: LoadingState) => void;
     error: string | null;
     numberOfTrees: number;
     onNumberOfTreesChange: (count: number) => void;
     reforestationGoal: number;
     onReforestationGoalChange: (goal: number) => void;
+    useGrounding: boolean;
+    onUseGroundingChange: (use: boolean) => void;
 }
 
 // --- Reusable UI Components ---
-const Clock: React.FC = () => {
-    const { language, t } = useLanguage();
-    const [time, setTime] = useState(new Date());
-
-    useEffect(() => {
-        const timerId = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(timerId);
-    }, []);
-
-    const locale = language === 'fa' ? 'fa-IR-u-nu-latn' : language;
-    
-    return (
-        <div className="bg-slate-950/50 p-3 rounded-lg mb-4 text-center border border-slate-800">
-            <p className="text-xs text-slate-400 mb-1">{t('main.currentTime')}</p>
-            <p className="font-mono text-emerald-300 text-sm sm:text-base">
-                {time.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-             <p className="font-mono text-emerald-300 text-sm sm:text-base">
-                {time.toLocaleTimeString(locale)}
-            </p>
-        </div>
-    );
-};
-
-
-const GroundingReferences: React.FC<{ chunks: GroundingChunk[] | undefined, t: (key: string) => string }> = ({ chunks, t }) => {
-    if (!chunks || chunks.length === 0) return null;
-    
-    const links = chunks.flatMap(chunk => {
-        if (chunk.web) return { uri: chunk.web.uri, title: chunk.web.title || chunk.web.uri };
-        if (chunk.maps) {
-            const mapLinks = [{ uri: chunk.maps.uri, title: chunk.maps.title || chunk.maps.uri }];
-            chunk.maps.placeAnswerSources?.forEach(source => {
-                source.reviewSnippets?.forEach(snippet => {
-                     mapLinks.push({ uri: snippet.uri, title: `Review by ${snippet.author}`});
-                });
-            });
-            return mapLinks;
-        }
-        return [];
-    }).filter((link, index, self) => index === self.findIndex(l => l.uri === link.uri)); // Remove duplicates
-
-    if (links.length === 0) return null;
-
-    return (
-        <div className="mt-4 pt-4 border-t border-slate-700">
-            <h5 className="text-sm font-semibold text-slate-400 mb-2">{t('results.sources')}:</h5>
-            <ul className="list-disc list-inside text-xs space-y-1">
-                {links.map((link, index) => (
-                    <li key={index}>
-                        <a href={link.uri} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline break-all">
-                            {link.title}
-                        </a>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
-
 
 const LoadingIndicator: React.FC = () => (
     <div className="flex items-center justify-center p-8">
@@ -98,17 +41,11 @@ const LoadingIndicator: React.FC = () => (
     </div>
 );
 
-const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon: string; isLoading: boolean; loadingSkeleton?: React.ReactNode; tooltipText?: string; }> = ({ title, icon, children, isLoading, loadingSkeleton, tooltipText }) => (
-    <div className="bg-slate-900 p-6 rounded-lg border border-slate-800">
+const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon: string; isLoading: boolean; loadingSkeleton?: React.ReactNode }> = ({ title, icon, children, isLoading, loadingSkeleton }) => (
+    <div className="bg-slate-800/50 p-6 rounded-lg border border-white/10 h-full">
         <div className="flex items-center mb-4">
             <i className={`${icon} text-2xl text-emerald-400 mr-3 rtl:ml-3`}></i>
             <h3 className="text-xl font-bold text-white">{title}</h3>
-            {tooltipText && (
-                <div className="tooltip-container ml-2 rtl:mr-2">
-                    <i className="fa-solid fa-circle-info text-slate-500 cursor-pointer"></i>
-                    <span className="tooltip-text">{tooltipText}</span>
-                </div>
-            )}
         </div>
         {isLoading ? (loadingSkeleton ?? <LoadingIndicator />) : children}
     </div>
@@ -118,26 +55,26 @@ const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon: strin
 
 const PlantingSuggestionSkeleton: React.FC = () => (
     <div className="space-y-4 animate-pulse">
-        <div className="bg-slate-800 rounded h-10 w-full"></div>
+        <div className="bg-slate-700/50 rounded h-10 w-full"></div>
         {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-slate-800/50 p-4 rounded-lg space-y-3 border border-slate-700">
+            <div key={i} className="bg-slate-900/50 p-4 rounded-lg space-y-3 border border-slate-700">
                 <div className="flex justify-between items-start">
-                    <div className="bg-slate-700 rounded h-6 w-1/3"></div>
+                    <div className="bg-slate-700/50 rounded h-6 w-1/3"></div>
                     <div className="flex-shrink-0 pl-2 rtl:pr-2 rtl:pl-0 w-24 space-y-1">
-                        <div className="bg-slate-700 rounded h-4 w-full"></div>
-                        <div className="bg-slate-700 rounded h-5 w-full"></div>
+                        <div className="bg-slate-700/50 rounded h-4 w-full"></div>
+                        <div className="bg-slate-700/50 rounded h-5 w-full"></div>
                     </div>
                 </div>
-                <div className="bg-slate-700 rounded h-4 w-full"></div>
+                <div className="bg-slate-700/50 rounded h-4 w-full"></div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 pt-3 border-t border-slate-700/50">
                     {[...Array(3)].map((_, j) => (
                         <div key={j} className="space-y-1">
-                            <div className="bg-slate-700 rounded h-4 w-2/3"></div>
-                            <div className="bg-slate-700 rounded h-4 w-1/2"></div>
+                            <div className="bg-slate-700/50 rounded h-4 w-2/3"></div>
+                            <div className="bg-slate-700/50 rounded h-4 w-1/2"></div>
                         </div>
                     ))}
                 </div>
-                <div className="bg-slate-700 rounded-md h-16 mt-2"></div>
+                <div className="bg-slate-700/50 rounded-md h-16 mt-2"></div>
             </div>
         ))}
     </div>
@@ -145,11 +82,11 @@ const PlantingSuggestionSkeleton: React.FC = () => (
 
 const VegetationAnalysisSkeleton: React.FC = () => (
     <div className="space-y-3 animate-pulse">
-        <div className="bg-slate-800 rounded h-5 w-3/4"></div>
-        <div className="bg-slate-800 rounded h-5 w-1/2"></div>
+        <div className="bg-slate-700/50 rounded h-5 w-3/4"></div>
+        <div className="bg-slate-700/50 rounded h-5 w-1/2"></div>
         <div className="pt-2 border-t border-slate-700 space-y-2">
-             <div className="bg-slate-800 rounded h-4 w-full"></div>
-             <div className="bg-slate-800 rounded h-4 w-5/6"></div>
+             <div className="bg-slate-700/50 rounded h-4 w-full"></div>
+             <div className="bg-slate-700/50 rounded h-4 w-5/6"></div>
         </div>
     </div>
 );
@@ -157,24 +94,68 @@ const VegetationAnalysisSkeleton: React.FC = () => (
 const RiskAnalysisSkeleton: React.FC = () => (
     <div className="space-y-3 animate-pulse">
         <div className="text-center mb-4">
-            <div className="bg-slate-800 rounded h-12 w-1/3 mx-auto"></div>
+            <div className="bg-slate-700/50 rounded h-4 w-1/2 mx-auto mb-2"></div>
+            <div className="bg-slate-700/50 rounded h-8 w-1/3 mx-auto"></div>
         </div>
         {[...Array(2)].map((_, i) => (
-             <div key={i} className="bg-slate-800/50 p-2 rounded-md space-y-1">
-                <div className="bg-slate-700 rounded h-4 w-3/4"></div>
-                <div className="bg-slate-700 rounded h-3 w-full"></div>
+             <div key={i} className="bg-slate-900/50 p-2 rounded-md space-y-1">
+                <div className="bg-slate-700/50 rounded h-4 w-3/4"></div>
+                <div className="bg-slate-700/50 rounded h-3 w-full"></div>
             </div>
         ))}
     </div>
 );
 
+const WeatherDisplaySkeleton: React.FC = () => (
+    <div className="space-y-4 animate-pulse">
+        <div className="flex justify-between items-center">
+            <div className="bg-slate-700/50 rounded h-5 w-1/3"></div>
+            <div className="bg-slate-700/50 rounded h-6 w-1/4"></div>
+        </div>
+        <div className="flex justify-between items-center">
+            <div className="bg-slate-700/50 rounded h-5 w-1/2"></div>
+            <div className="bg-slate-700/50 rounded h-6 w-1/5"></div>
+        </div>
+        <div className="flex justify-between items-center">
+            <div className="bg-slate-700/50 rounded h-5 w-2/5"></div>
+            <div className="bg-slate-700/50 rounded h-6 w-1/4"></div>
+        </div>
+        <div className="pt-2 border-t border-slate-700 space-y-2">
+            <div className="bg-slate-700/50 rounded h-4 w-full"></div>
+        </div>
+    </div>
+);
+
 // --- Analysis Result Display Components ---
+const SourceList: React.FC<{ sources?: GroundingSource[], t: (key: string) => string }> = ({ sources, t }) => {
+    if (!sources || sources.length === 0) return null;
+
+    return (
+        <div className="mt-6 pt-4 border-t border-slate-700/50">
+            <h5 className="text-sm font-semibold text-slate-400 mb-2 flex items-center gap-2">
+                <i className="fa-solid fa-link"></i>
+                {t('results.sources')}
+            </h5>
+            <ul className="space-y-1 list-none pl-0 text-xs">
+                {sources.map((source, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                        <span className="text-slate-500 mt-0.5">{source.type === 'web' ? <i className="fa-solid fa-globe"></i> : <i className="fa-solid fa-map-pin"></i>}</span>
+                        <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline truncate" title={source.title}>
+                           {source.title}
+                        </a>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 
 const getSeverityBadgeClasses = (severity: Severity) => {
     const colors: Record<Severity, string> = {
-        High: 'bg-red-500/10 text-red-400 border-red-500/30',
-        Medium: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
-        Low: 'bg-green-500/10 text-green-400 border-green-500/30',
+        High: 'bg-red-500/20 text-red-300 border-red-500/50',
+        Medium: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
+        Low: 'bg-green-500/20 text-green-300 border-green-500/50',
     };
     return `px-2 py-0.5 text-xs font-semibold rounded-full border ${colors[severity] || ''}`;
 };
@@ -186,63 +167,59 @@ const RiskScore: React.FC<{ score: number }> = ({ score }) => {
         if (score > 40) return 'text-yellow-400';
         return 'text-green-400';
     };
-    return (
-        <div className="text-center">
-            <p className={`font-bold font-mono text-5xl ${getColor()}`}>{score}<span className="text-3xl text-slate-500">/100</span></p>
-        </div>
-    );
+    return <span className={`font-bold text-2xl ${getColor()}`}>{score} / 100</span>;
 };
 
 const PlantingSuggestionDisplay: React.FC<Pick<GreenHopePageProps, 'plantingSuggestion' | 'numberOfTrees' | 'onGenerateCampaign' | 'isLoading'>> = ({ plantingSuggestion, numberOfTrees, onGenerateCampaign, isLoading }) => {
-    const { t, currencySymbol } = useLanguage();
+    const { t } = useLanguage();
     if (!plantingSuggestion) return null;
 
     return (
         <div className="space-y-4">
-            <p className="text-slate-300 mb-4">{plantingSuggestion.summary}</p>
-            <div className="space-y-4">
-                {plantingSuggestion.suitableSpecies.map(s => (
-                    <div key={s.name} className="bg-slate-800 p-4 rounded-lg space-y-3 border border-slate-700">
-                        <div className="flex justify-between items-start">
-                            <h4 className="font-bold text-emerald-400 text-lg">{s.name}</h4>
-                            <div className="text-right flex-shrink-0 pl-2 rtl:pr-2 rtl:pl-0">
-                                <p className="text-xs text-slate-400">{t('results.costPerTree')}</p>
-                                <p className="font-semibold text-white">
-                                    {s.estimatedCostPerTree.min.toLocaleString()} - {s.estimatedCostPerTree.max.toLocaleString()}
-                                    <span className="text-sm text-slate-400 ml-1 rtl:mr-1">{currencySymbol}</span>
+            <p className="text-slate-300 mb-4 whitespace-pre-wrap">{plantingSuggestion.summary}</p>
+            {plantingSuggestion.suitableSpecies.length > 0 && (
+                 <div className="space-y-4">
+                    {plantingSuggestion.suitableSpecies.map(s => (
+                        <div key={s.name} className="bg-slate-900/50 p-4 rounded-lg space-y-3 border border-slate-700">
+                            <div className="flex justify-between items-start">
+                                <h4 className="font-bold text-emerald-300 text-lg">{s.name}</h4>
+                                <div className="text-right flex-shrink-0 pl-2 rtl:pr-2 rtl:pl-0">
+                                    <p className="text-xs text-slate-400">{t('results.costPerTree')}</p>
+                                    <p className="font-semibold text-white">${s.estimatedCostPerTree.min} - ${s.estimatedCostPerTree.max}</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-300"><strong className="text-slate-400">{t('results.reason')}:</strong> {s.reason}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 pt-3 border-t border-slate-700/50 text-sm">
+                                <div>
+                                    <p className="font-semibold text-slate-400">{t('results.bestPlantingTime')}</p>
+                                    <p className="text-white">{s.bestPlantingTime}</p>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-slate-400">{t('results.wateringNeeds')}</p>
+                                    <p className="text-white">{s.initialWateringNeeds}</p>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-slate-400">{t('results.protectionDuration')}</p>
+                                    <p className="text-white">{s.protectionDuration}</p>
+                                </div>
+                            </div>
+                            <div className="bg-gradient-to-r from-emerald-800/50 to-emerald-700/50 text-center p-4 rounded-lg mt-4 border border-emerald-600/50 shadow-lg">
+                                <p className="text-base font-bold text-emerald-200 flex items-center justify-center gap-2">
+                                    <i className="fa-solid fa-sack-dollar"></i>
+                                    <span>{t('results.totalCost', { count: numberOfTrees.toLocaleString() })}</span>
+                                </p>
+                                <p className="text-2xl font-mono font-bold text-white mt-1">
+                                    ${(s.estimatedCostPerTree.min * numberOfTrees).toLocaleString()} - ${(s.estimatedCostPerTree.max * numberOfTrees).toLocaleString()}
                                 </p>
                             </div>
                         </div>
-                        <p className="text-sm text-slate-300"><strong className="text-slate-400">{t('results.reason')}:</strong> {s.reason}</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-3 pt-3 border-t border-slate-700/50 text-sm">
-                            <div>
-                                <p className="font-semibold text-slate-400">{t('results.bestPlantingTime')}</p>
-                                <p className="text-white">{s.bestPlantingTime}</p>
-                            </div>
-                            <div>
-                                <p className="font-semibold text-slate-400">{t('results.wateringNeeds')}</p>
-                                <p className="text-white">{s.initialWateringNeeds}</p>
-                            </div>
-                            <div>
-                                <p className="font-semibold text-slate-400">{t('results.protectionDuration')}</p>
-                                <p className="text-white">{s.protectionDuration}</p>
-                            </div>
-                        </div>
-                        <div className="bg-gradient-to-br from-slate-800 to-slate-700/50 text-center p-4 rounded-lg mt-4 border border-slate-700 shadow-lg">
-                            <p className="text-base font-bold text-emerald-300 flex items-center justify-center gap-2">
-                                <i className="fa-solid fa-sack-dollar"></i>
-                                <span>{t('results.totalCost', { count: numberOfTrees.toLocaleString() })}</span>
-                            </p>
-                            <p className="text-2xl font-mono font-bold text-white mt-1">
-                                {(s.estimatedCostPerTree.min * numberOfTrees).toLocaleString()} - {(s.estimatedCostPerTree.max * numberOfTrees).toLocaleString()}
-                                <span className="text-lg text-slate-400 ml-1 rtl:mr-1">{currencySymbol}</span>
-                            </p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <button onClick={onGenerateCampaign} disabled={!!isLoading || numberOfTrees < 1} className="w-full mt-4 py-2 px-4 bg-amber-600 text-white font-semibold rounded-md hover:bg-amber-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">{t('results.startCrowdfunding')}</button>
-            <GroundingReferences chunks={plantingSuggestion.grounding} t={t} />
+                    ))}
+                </div>
+            )}
+            <SourceList sources={plantingSuggestion.sources} t={t} />
+            {plantingSuggestion.suitableSpecies.length > 0 && (
+                <button onClick={onGenerateCampaign} disabled={!!isLoading || numberOfTrees < 1} className="w-full mt-4 py-2 px-4 bg-yellow-600 text-white font-semibold rounded-md hover:bg-yellow-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed">{t('results.startCrowdfunding')}</button>
+            )}
         </div>
     );
 };
@@ -268,16 +245,15 @@ const VegetationAnalysisDisplay: React.FC<Pick<GreenHopePageProps, 'vegetationAn
     if (!vegetationAnalysis) return null;
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <span className="text-slate-400">{t('results.coverage')}:</span>
-                <span className="font-bold text-lg">{vegetationAnalysis.coveragePercentage}%</span>
-            </div>
-            <div className="flex items-center justify-between">
+             <div className="flex items-center justify-between">
                 <span className="text-slate-400">{t('results.need')}:</span>
                 <span className={getSeverityBadgeClasses(vegetationAnalysis.reforestationNeed)}>{vegetationAnalysis.reforestationNeed}</span>
             </div>
-            <p className="pt-3 border-t border-slate-700 text-sm text-slate-300">{vegetationAnalysis.analysis}</p>
-            <GroundingReferences chunks={vegetationAnalysis.grounding} t={t} />
+             <div className="pt-3 border-t border-slate-700">
+                <span className="text-slate-400 text-sm">{t('results.analysis')}:</span>
+                 <p className="text-sm text-slate-300 whitespace-pre-wrap">{vegetationAnalysis.analysis}</p>
+            </div>
+            <SourceList sources={vegetationAnalysis.sources} t={t} />
         </div>
     );
 };
@@ -292,19 +268,55 @@ const RiskAnalysisDisplay: React.FC<Pick<GreenHopePageProps, 'riskAnalysis'>> = 
                 <RiskScore score={riskAnalysis.overallRiskScore} />
             </div>
             {riskAnalysis.risks.map(r => (
-                <div key={r.name} className="bg-slate-800 p-3 rounded-md text-sm border border-slate-700">
+                <div key={r.name} className="bg-slate-900/50 p-3 rounded-md text-sm">
                     <div className="flex justify-between items-center mb-1">
                         <strong className="text-slate-300">{r.name}</strong>
                         <span className={getSeverityBadgeClasses(r.severity)}>{r.severity}</span>
                     </div>
-                    <p className="text-xs text-slate-400">{r.explanation}</p>
+                    <p className="text-xs text-slate-400 whitespace-pre-wrap">{r.explanation}</p>
                 </div>
             ))}
-             <GroundingReferences chunks={riskAnalysis.grounding} t={t} />
+            <SourceList sources={riskAnalysis.sources} t={t} />
         </div>
     );
 };
 
+const WeatherDisplay: React.FC<{ weatherData: WeatherData | null, onFetchWeather: () => void, isLoading: boolean }> = ({ weatherData, onFetchWeather, isLoading }) => {
+    const { t } = useLanguage();
+    if (!weatherData) return null;
+
+    const weatherItems = [
+        { icon: 'fa-temperature-half', label: t('weather.temperature'), value: `${weatherData.temperature.toFixed(1)}°C` },
+        { icon: 'fa-cloud-showers-heavy', label: t('weather.precipitation'), value: `${weatherData.precipitationProbability}%` },
+        { icon: 'fa-wind', label: t('weather.windSpeed'), value: `${weatherData.windSpeed} km/h` },
+    ];
+
+    return (
+        <div className="flex flex-col h-full">
+            <div className="flex-grow">
+                <div className="space-y-3 mb-4">
+                    {weatherItems.map(item => (
+                        <div key={item.label} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center text-slate-400">
+                                <i className={`fa-solid ${item.icon} w-5 text-center mr-2 rtl:ml-2`}></i>
+                                <span>{item.label}:</span>
+                            </div>
+                            <span className="font-bold text-lg text-white">{item.value}</span>
+                        </div>
+                    ))}
+                </div>
+                <p className="pt-3 border-t border-slate-700 text-sm text-slate-300 whitespace-pre-wrap">{weatherData.summary}</p>
+                <SourceList sources={weatherData.sources} t={t} />
+            </div>
+            <div className="mt-4">
+                 <button onClick={onFetchWeather} disabled={isLoading} className="w-full text-xs py-2 px-3 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">
+                    {isLoading ? <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-white"></div> : <i className="fa-solid fa-arrows-rotate"></i>}
+                    <span>{t('weather.refresh')}</span>
+                </button>
+            </div>
+        </div>
+    );
+};
 
 // --- Main Page Component ---
 
@@ -321,7 +333,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     const [map, setMap] = useState<any>(null);
     const [marker, setMarker] = useState<any>(null);
     const [areaMarkers, setAreaMarkers] = useState<any[]>([]);
-    const [riskClusterGroup, setRiskClusterGroup] = useState<any>(null);
+    const [needMarkers, setNeedMarkers] = useState<any[]>([]);
     const [activeMapType, setActiveMapType] = useState<string>('satellite');
     const [tileLayer, setTileLayer] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -329,12 +341,13 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
     const [activeView, setActiveView] = useState<ActiveView>('reforestation');
-    const [currentLoading, setCurrentLoading] = useState<LoadingState>(false);
     const [suggestedAreas, setSuggestedAreas] = useState<PlantingArea[]>([]);
-    const [suggestedAreasGrounding, setSuggestedAreasGrounding] = useState<GroundingChunk[] | undefined>();
-    const [isLocating, setIsLocating] = useState(false);
-    const [isSelectingArea, setIsSelectingArea] = useState(false);
-    const selectionRectangleRef = useRef<any>(null);
+    const [reforestationAreas, setReforestationAreas] = useState<ReforestationArea[]>([]);
+    const [showNeedLayer, setShowNeedLayer] = useState(false);
+    const dataLayersPanelRef = useRef<HTMLDivElement>(null);
+    const [dataLayers, setDataLayers] = useState<Record<string, { layer: any; active: boolean }>>({});
+    const [isDataLayerPanelOpen, setIsDataLayerPanelOpen] = useState(false);
+    const drawnItems = useRef<any>(null);
 
     const mapTiles = {
         satellite: {
@@ -348,51 +361,144 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
         roadmap: {
             url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        },
-        humanitarian: {
-            url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://www.hotosm.org/" target="_blank">HOT</a>'
         }
     };
 
+    const availableDataLayers = {
+        gfc: {
+            id: 'gfc',
+            name: t('mapDataLayers.gfc'),
+            url: 'https://tiles.globalforestwatch.org/gfw_integrated_alerts/latest/default/{z}/{x}/{y}.png',
+            attribution: 'GFW'
+        }
+    };
+    
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dataLayersPanelRef.current && !dataLayersPanelRef.current.contains(event.target as Node)) {
+                setIsDataLayerPanelOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const toggleDataLayer = (layerId: keyof typeof availableDataLayers) => {
+        if (!map) return;
+
+        setDataLayers(prevLayers => {
+            const newLayers = { ...prevLayers };
+            const layerInfo = availableDataLayers[layerId];
+            const existingLayerState = newLayers[layerId];
+
+            if (existingLayerState && existingLayerState.active) {
+                // Deactivate and remove
+                map.removeLayer(existingLayerState.layer);
+                newLayers[layerId] = { ...existingLayerState, active: false };
+            } else {
+                // Activate and add
+                const newTileLayer = L.tileLayer(layerInfo.url, {
+                    attribution: layerInfo.attribution,
+                    opacity: 0.7
+                });
+                newTileLayer.addTo(map);
+                newLayers[layerId] = { layer: newTileLayer, active: true };
+            }
+            return newLayers;
+        });
+    };
+
+    const clearAllDynamicMarkers = useCallback(() => {
+         areaMarkers.forEach(m => m.remove());
+         setAreaMarkers([]);
+         setSuggestedAreas([]);
+         needMarkers.forEach(m => m.remove());
+         setNeedMarkers([]);
+         setReforestationAreas([]);
+    }, [areaMarkers, needMarkers]);
+    
     useEffect(() => {
         if (mapRef.current && !map) {
             try {
                 const newMap = L.map(mapRef.current, {
-                    zoomControl: false, // Add it manually for positioning
+                    zoomControl: false,
                 }).setView([35.6892, 51.3890], 5);
                 
                 L.control.zoom({ position: 'bottomright' }).addTo(newMap);
-
                 setMap(newMap);
 
-                const initialTileLayer = L.tileLayer(
-                    mapTiles.satellite.url,
-                    { attribution: mapTiles.satellite.attribution }
-                ).addTo(newMap);
+                const initialTileLayer = L.tileLayer(mapTiles.satellite.url, { attribution: mapTiles.satellite.attribution }).addTo(newMap);
                 setTileLayer(initialTileLayer);
-                
-                const newClusterGroup = L.markerClusterGroup();
-                newMap.addLayer(newClusterGroup);
-                setRiskClusterGroup(newClusterGroup);
 
-                newMap.on('click', (e: any) => {
-                    if (isSelectingArea) return;
-                    props.onLocationSelect({ lat: e.latlng.lat, lng: e.latlng.lng });
-                    newMap.panTo(e.latlng);
+                // --- Drawing Logic ---
+                const featureGroup = new L.FeatureGroup().addTo(newMap);
+                drawnItems.current = featureGroup;
+
+                new L.Control.Draw({
+                    position: 'topright',
+                    draw: {
+                        polygon: {
+                            shapeOptions: { color: '#10b981', weight: 2, opacity: 0.8, },
+                            allowIntersection: false,
+                        },
+                        polyline: false, circle: false, rectangle: false, marker: false, circlemarker: false,
+                    },
+                    edit: { featureGroup: featureGroup, remove: true }
+                }).addTo(newMap);
+
+                const handleAnalyzePolygon = async (layer: any) => {
+                    clearAllDynamicMarkers();
+                    const latlngs = layer.getLatLngs()[0].map((p: any) => ({ lat: p.lat, lng: p.lng }));
+                    props.setIsLoading('areas');
+                    try {
+                        const result = await analyzePolygonArea(latlngs, props.numberOfTrees, language, props.useGrounding);
+                        setSuggestedAreas(result);
+                        addToast(result.length > 0 ? `${result.length} suitable spots found.` : 'No suitable spots found.', result.length > 0 ? 'success' : 'info');
+                    } catch (err) {
+                        console.error(err);
+                        addToast(t('error'), 'error');
+                    } finally {
+                        props.setIsLoading(false);
+                    }
+                };
+                
+                newMap.on(L.Draw.Event.CREATED, (e: any) => {
+                    const layer = e.layer;
+                    drawnItems.current.clearLayers();
+                    drawnItems.current.addLayer(layer);
+                    handleAnalyzePolygon(layer);
                 });
+
+                newMap.on(L.Draw.Event.EDITED, (e: any) => {
+                    e.layers.eachLayer((layer: any) => handleAnalyzePolygon(layer));
+                });
+
+                newMap.on(L.Draw.Event.DELETED, () => {
+                     clearAllDynamicMarkers();
+                });
+
             } catch (error) {
                 console.error("Leaflet map initialization failed:", error);
                 addToast(t('mapError.init'), 'error');
             }
         }
-        // Cleanup map instance on component unmount
-        return () => {
-            if (map) {
-                map.remove();
-            }
+        return () => { if (map) { map.remove(); } };
+    }, [props.useGrounding]); // Rerun effect if grounding changes to update handler closure
+
+    useEffect(() => {
+        if (!map) return;
+        const handleClick = (e: any) => {
+            if (drawnItems.current) { drawnItems.current.clearLayers(); }
+            props.onLocationSelect({ lat: e.latlng.lat, lng: e.latlng.lng });
+            clearAllDynamicMarkers();
+            setShowNeedLayer(false);
+            map.panTo(e.latlng);
         };
-    }, []);
+        map.on('click', handleClick);
+        return () => { map.off('click', handleClick); };
+    }, [map, props.onLocationSelect, clearAllDynamicMarkers]);
 
 
     useEffect(() => {
@@ -406,54 +512,6 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
         }
     }, [props.selectedLocation, map, marker]);
     
-    const clearAreaMarkers = useCallback(() => {
-         areaMarkers.forEach(m => m.remove());
-         setAreaMarkers([]);
-         setSuggestedAreas([]);
-         setSuggestedAreasGrounding(undefined);
-    }, [areaMarkers]);
-
-    const clearRiskMarkers = useCallback(() => {
-        if (riskClusterGroup) {
-            riskClusterGroup.clearLayers();
-        }
-    }, [riskClusterGroup]);
-
-    useEffect(() => {
-        clearRiskMarkers();
-
-        if (map && props.riskAnalysis?.risks && riskClusterGroup) {
-            props.riskAnalysis.risks.forEach(risk => {
-                if (risk.location) {
-                    const colorMap: Record<Severity, string> = {
-                        High: '#ef4444', // red-500
-                        Medium: '#eab308', // yellow-500
-                        Low: '#22c55e', // green-500
-                    };
-                    const color = colorMap[risk.severity] || '#94a3b8'; // slate-400
-
-                    const icon = L.divIcon({
-                        html: `<div class="w-5 h-5 rounded-full border-2 border-white shadow-md flex items-center justify-center" style="background-color: ${color};"><i class="fa-solid fa-triangle-exclamation text-white text-[10px]"></i></div>`,
-                        className: '',
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10],
-                    });
-
-                    const riskMarker = L.marker(risk.location, { icon });
-
-                    const severityClass = getSeverityBadgeClasses(risk.severity);
-                    const popupContent = `
-                        <div class="text-slate-300 font-sans p-1 max-w-xs">
-                            <h4 class="font-bold mt-0 mb-1 text-white flex items-center gap-2"><span class="${severityClass}">${risk.severity}</span> ${risk.name}</h4>
-                            <p class="m-0 text-xs">${risk.explanation}</p>
-                        </div>
-                    `;
-                    riskMarker.bindPopup(popupContent);
-                    riskClusterGroup.addLayer(riskMarker);
-                }
-            });
-        }
-    }, [props.riskAnalysis, map, clearRiskMarkers, riskClusterGroup]);
 
     useEffect(() => {
         if (map && suggestedAreas.length > 0) {
@@ -469,10 +527,10 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                 const areaMarker = L.marker(area.location, { icon }).addTo(map);
 
                 const popupContent = `
-                    <div class="text-slate-300 font-sans p-1">
-                        <h4 class="font-bold mt-0 mb-1 text-white">${t('main.areaSuggestion')}</h4>
+                    <div class="text-slate-800 font-sans p-1">
+                        <h4 class="font-bold mt-0 mb-1">${t('main.areaSuggestion')}</h4>
                         <p class="m-0 mb-1 text-xs">${area.reason}</p>
-                        <button onclick="document.dispatchEvent(new CustomEvent('selectArea', { detail: { lat: ${area.location.lat}, lng: ${area.location.lng} } }))" class="text-emerald-400 font-bold border-none bg-transparent p-0 cursor-pointer hover:underline text-sm">${t('main.selectForAnalysis')}</button>
+                        <button onclick="document.dispatchEvent(new CustomEvent('selectArea', { detail: { lat: ${area.location.lat}, lng: ${area.location.lng} } }))" class="text-emerald-600 font-bold border-none bg-transparent p-0 cursor-pointer hover:underline text-sm">${t('main.analyzeLocation')}</button>
                     </div>
                 `;
                 areaMarker.bindPopup(popupContent);
@@ -483,28 +541,82 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     }, [suggestedAreas, map, t]);
 
     useEffect(() => {
-        const selectAreaHandler = (e: CustomEvent) => props.onLocationSelect(e.detail);
+        if (map && reforestationAreas.length > 0) {
+            const newMarkers: any[] = [];
+            const colorMap: Record<Severity, string> = { 'High': 'red', 'Medium': 'yellow', 'Low': 'green' };
+
+            reforestationAreas.forEach(area => {
+                const color = colorMap[area.need];
+                const icon = L.divIcon({
+                    html: `<div class="w-5 h-5 rounded-full bg-${color}-500 border-2 border-white shadow-lg animate-pulse"></div>`,
+                    className: '',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                const needMarker = L.marker(area.location, { icon }).addTo(map);
+                needMarker.bindTooltip(area.reason, { direction: 'top', offset: L.point(0, -10) });
+                needMarker.on('click', () => {
+                    props.onLocationSelect(area.location, true);
+                    map.setView(area.location, 14);
+                });
+                newMarkers.push(needMarker);
+            });
+            setNeedMarkers(newMarkers);
+        }
+    }, [reforestationAreas, map, props.onLocationSelect]);
+
+    useEffect(() => {
+        const selectAreaHandler = (e: CustomEvent) => props.onLocationSelect(e.detail, true);
         document.addEventListener('selectArea', selectAreaHandler as EventListener);
         return () => document.removeEventListener('selectArea', selectAreaHandler as EventListener);
     }, [props.onLocationSelect]);
     
     const handleFindAreas = async () => {
         if (!map) return;
-        clearAreaMarkers();
-        setCurrentLoading('areas');
+        if (drawnItems.current) { drawnItems.current.clearLayers(); }
+        clearAllDynamicMarkers();
+        props.setIsLoading('areas');
         try {
             const bounds = map.getBounds();
             const sw = bounds.getSouthWest();
             const ne = bounds.getNorthEast();
-            const { areas, grounding } = await findPlantingAreas({ sw: { lat: sw.lat, lng: sw.lng }, ne: { lat: ne.lat, lng: ne.lng } }, props.numberOfTrees, language);
-            setSuggestedAreas(areas);
-            setSuggestedAreasGrounding(grounding);
-            addToast(areas.length > 0 ? `${areas.length} suitable areas found.` : 'No suitable areas found in the current view.', areas.length > 0 ? 'success' : 'info');
+            const result = await findPlantingAreas({ sw: { lat: sw.lat, lng: sw.lng }, ne: { lat: ne.lat, lng: ne.lng } }, props.numberOfTrees, language, props.useGrounding);
+            setSuggestedAreas(result);
+            addToast(result.length > 0 ? `${result.length} suitable areas found.` : 'No suitable areas found in the current view.', result.length > 0 ? 'success' : 'info');
         } catch (err) {
             console.error(err);
             addToast(t('error'), 'error');
         } finally {
-            setCurrentLoading(false);
+            props.setIsLoading(false);
+        }
+    };
+    
+    const handleToggleNeedsLayer = async () => {
+        if (!map) return;
+        
+        if (showNeedLayer) {
+            setShowNeedLayer(false);
+            needMarkers.forEach(m => m.remove());
+            setNeedMarkers([]);
+            setReforestationAreas([]);
+            return;
+        }
+
+        clearAllDynamicMarkers();
+        setShowNeedLayer(true);
+        props.setIsLoading('reforestation-need');
+        try {
+            const bounds = map.getBounds();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            const result = await findReforestationAreas({ sw: { lat: sw.lat, lng: sw.lng }, ne: { lat: ne.lat, lng: ne.lng } }, language);
+            setReforestationAreas(result);
+            addToast(result.length > 0 ? `${result.length} critical areas identified.` : 'No critical areas found in this view.', result.length > 0 ? 'success' : 'info');
+        } catch (err) {
+            console.error(err);
+            addToast(t('error'), 'error');
+        } finally {
+            props.setIsLoading(false);
         }
     };
 
@@ -519,132 +631,11 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
             setActiveMapType(newMapTypeId);
         }
     };
-
-    const handleLocateUser = () => {
-        if (!navigator.geolocation) {
-            addToast(t('mapError.geolocationNotSupported'), 'error');
-            return;
-        }
-        setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const location = { lat: latitude, lng: longitude };
-                map.setView(location, 13);
-                props.onLocationSelect(location);
-                setIsLocating(false);
-            },
-            (error) => {
-                let message = t('mapError.geolocationPositionUnavailable');
-                if (error.code === error.PERMISSION_DENIED) {
-                    message = t('mapError.geolocationPermissionDenied');
-                } else if (error.code === error.TIMEOUT) {
-                    message = t('mapError.geolocationTimeout');
-                }
-                addToast(message, 'error');
-                setIsLocating(false);
-            }
-        );
-    };
-
-    useEffect(() => {
-        if (!map) return;
-    
-        if (isSelectingArea) {
-            map.dragging.disable();
-            L.DomUtil.addClass(map.getContainer(), 'leaflet-crosshair');
-            
-            let startPos: any = null;
-    
-            const onMouseDown = (e: any) => {
-                startPos = e.latlng;
-                if (selectionRectangleRef.current) {
-                    selectionRectangleRef.current.remove();
-                }
-                selectionRectangleRef.current = L.rectangle([startPos, startPos], {
-                    color: "#34d399", weight: 2, fillOpacity: 0.1,
-                }).addTo(map);
-                map.on('mousemove', onMouseMove);
-                map.once('mouseup', onMouseUp);
-            };
-    
-            const onMouseMove = (e: any) => {
-                if (startPos && selectionRectangleRef.current) {
-                    selectionRectangleRef.current.setBounds(L.latLngBounds(startPos, e.latlng));
-                }
-            };
-    
-            const onMouseUp = (e: any) => {
-                map.off('mousemove', onMouseMove);
-                
-                if (selectionRectangleRef.current) {
-                    const bounds = selectionRectangleRef.current.getBounds();
-                    
-                    const popupContent = document.createElement('div');
-                    popupContent.innerHTML = `<p class="text-center font-sans mb-2">${t('main.analyzeSelection')}</p>`;
-                    const button = document.createElement('button');
-                    button.innerHTML = t('main.analyze');
-                    button.className = "w-full py-1 px-3 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors";
-                    
-                    button.onclick = () => {
-                        button.disabled = true;
-                        button.innerHTML = `<div class="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-white mx-auto"></div>`;
-                        const sw = bounds.getSouthWest();
-                        const ne = bounds.getNorthEast();
-                        clearAreaMarkers();
-                        findPlantingAreas({ sw: { lat: sw.lat, lng: sw.lng }, ne: { lat: ne.lat, lng: ne.lng } }, props.numberOfTrees, language)
-                         .then(({ areas, grounding }) => {
-                              setSuggestedAreas(areas);
-                              setSuggestedAreasGrounding(grounding);
-                              addToast(areas.length > 0 ? `${areas.length} areas found.` : 'No areas found in selection.', areas.length > 0 ? 'success' : 'info');
-                         })
-                         .catch(err => {
-                              console.error(err);
-                              addToast(t('error'), 'error');
-                         })
-                         .finally(() => {
-                            map.closePopup();
-                         });
-                    };
-                    popupContent.appendChild(button);
-    
-                    L.popup().setLatLng(bounds.getCenter()).setContent(popupContent).openOn(map);
-                    
-                    map.once('popupclose', () => {
-                         if (selectionRectangleRef.current) {
-                            selectionRectangleRef.current.remove();
-                            selectionRectangleRef.current = null;
-                         }
-                    });
-                }
-                
-                setIsSelectingArea(false);
-            };
-    
-            map.on('mousedown', onMouseDown);
-    
-            return () => {
-                map.off('mousedown', onMouseDown);
-                map.off('mousemove', onMouseMove);
-                map.off('mouseup', onMouseUp);
-                map.dragging.enable();
-                L.DomUtil.removeClass(map.getContainer(), 'leaflet-crosshair');
-                 if (selectionRectangleRef.current) {
-                    selectionRectangleRef.current.remove();
-                    selectionRectangleRef.current = null;
-                }
-            };
-        } else {
-             map.dragging.enable();
-             L.DomUtil.removeClass(map.getContainer(), 'leaflet-crosshair');
-        }
-    }, [map, isSelectingArea, t, language, props.numberOfTrees, addToast, clearAreaMarkers]);
     
     const mapTypes = [
         { id: 'satellite', label: t('mapLayers.satellite'), icon: 'fa-solid fa-satellite' },
         { id: 'terrain', label: t('mapLayers.terrain'), icon: 'fa-solid fa-mountain-sun' },
         { id: 'roadmap', label: t('mapLayers.roadmap'), icon: 'fa-solid fa-map' },
-        { id: 'humanitarian', label: t('mapLayers.humanitarian'), icon: 'fa-solid fa-hand-holding-heart' },
     ];
     
     const handleSearch = useCallback(async (e: React.FormEvent) => {
@@ -680,7 +671,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
         const lat = parseFloat(manualLat);
         const lng = parseFloat(manualLng);
         if (isNaN(lat) || lat < -90 || lat > 90) return addToast(t('mapError.invalidLat'), 'error');
-        if (isNaN(lng) || lng < -180 || lat > 180) return addToast(t('mapError.invalidLng'), 'error');
+        if (isNaN(lng) || lng < -180 || lng > 180) return addToast(t('mapError.invalidLng'), 'error');
         const location = { lat, lng };
         props.onLocationSelect(location);
         if(map) { map.setView(location, 12); }
@@ -689,7 +680,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     const legendItems = legendItemsConfig.map(item => ({ label: t(item.labelKey), color: item.color }));
     
     const TabButton: React.FC<{label: string, icon: string, targetView: ActiveView}> = ({label, icon, targetView}) => (
-        <button onClick={() => setActiveView(targetView)} role="tab" aria-selected={activeView === targetView} className={`flex-1 sm:flex-initial sm:px-6 py-3 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center justify-center space-x-2 rtl:space-x-reverse ${ activeView === targetView ? 'text-emerald-400 border-emerald-500 bg-slate-900' : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800/50'}`}>
+        <button onClick={() => setActiveView(targetView)} role="tab" aria-selected={activeView === targetView} className={`flex-1 sm:flex-initial sm:px-6 py-3 text-sm font-semibold rounded-t-lg border-b-2 transition-all flex items-center justify-center space-x-2 rtl:space-x-reverse ${ activeView === targetView ? 'text-emerald-400 border-emerald-400 bg-slate-800/50' : 'text-slate-400 border-transparent hover:text-white hover:bg-slate-800/20'}`}>
             <i className={`fa-solid ${icon}`}></i>
             <span>{label}</span>
         </button>
@@ -699,7 +690,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
 
     return (
         <div className="animate-fade-in">
-            <section className="py-20 text-center bg-gradient-to-b from-slate-950 to-emerald-900/20">
+            <section className="py-20 text-center bg-gradient-to-b from-slate-900 to-emerald-900/30">
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white">{t('hero.title')}</h1>
                     <p className="mt-4 text-lg text-slate-300 max-w-3xl mx-auto">{t('hero.subtitle')}</p>
@@ -707,22 +698,20 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
             </section>
             
             <section className="container mx-auto px-4 py-16">
-                 <div className="flex justify-center border-b border-slate-800 mb-8" role="tablist">
+                 <div className="flex justify-center border-b border-slate-700 mb-8" role="tablist">
                     <TabButton label={t('tabs.reforestation')} icon="fa-map-location-dot" targetView="reforestation" />
                     <TabButton label={t('tabs.homeGardening')} icon="fa-house-chimney-window" targetView="homeGardening" />
-                    <TabButton label={t('tabs.startupShowcase')} icon="fa-rocket" targetView="startupShowcase" />
                 </div>
                 
                 {activeView === 'reforestation' && (
                     <div className="animate-fade-in">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-1 bg-slate-900 p-6 rounded-lg border border-slate-800 h-min">
-                                <Clock />
+                            <div className="lg:col-span-1 bg-slate-800/50 p-6 rounded-lg border border-white/10 h-min">
                                 <p className="text-slate-300 text-center mb-4 text-sm">{t('main.instructions')}</p>
                                 <form onSubmit={handleSearch} className="mb-4">
                                     <label htmlFor="location-search" className="sr-only">{t('main.searchPlaceholder')}</label>
                                     <div className="relative">
-                                        <input type="text" id="location-search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('main.searchPlaceholder')} className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 pl-3 pr-10 rtl:pl-10 rtl:pr-3 text-white focus:ring-emerald-500 focus:border-emerald-500" disabled={!map} />
+                                        <input type="text" id="location-search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t('main.searchPlaceholder')} className="w-full bg-slate-900/50 border border-slate-600 rounded-md py-2 pl-3 pr-10 rtl:pl-10 rtl:pr-3 text-white focus:ring-emerald-500 focus:border-emerald-500" disabled={!map} />
                                         <button type="submit" disabled={isSearching || !searchQuery} className="absolute inset-y-0 right-0 rtl:right-auto rtl:left-0 flex items-center pr-3 rtl:pl-3 disabled:opacity-50" title={t('main.searchButtonTitle')}>
                                             {isSearching ? <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-white"></div> : <i className="fa-solid fa-magnifying-glass text-slate-400 hover:text-white"></i>}
                                         </button>
@@ -731,66 +720,105 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                                 <div className="mt-4 pt-4 border-t border-slate-700 mb-6">
                                     <label className="block text-sm font-medium text-slate-300 mb-2">{t('main.manualInputLabel')}</label>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
-                                        <input type="number" value={manualLat} onChange={(e) => setManualLat(e.target.value)} placeholder={t('main.latLabel')} step="any" className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-white focus:ring-emerald-500 focus:border-emerald-500" />
-                                        <input type="number" value={manualLng} onChange={(e) => setManualLng(e.target.value)} placeholder={t('main.lngLabel')} step="any" className="w-full bg-slate-800 border border-slate-700 rounded-md py-2 px-3 text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                        <input type="number" value={manualLat} onChange={(e) => setManualLat(e.target.value)} placeholder={t('main.latLabel')} step="any" className="w-full bg-slate-900/50 border border-slate-600 rounded-md py-2 px-3 text-white focus:ring-emerald-500 focus:border-emerald-500" />
+                                        <input type="number" value={manualLng} onChange={(e) => setManualLng(e.target.value)} placeholder={t('main.lngLabel')} step="any" className="w-full bg-slate-900/50 border border-slate-600 rounded-md py-2 px-3 text-white focus:ring-emerald-500 focus:border-emerald-500" />
                                     </div>
                                     <button type="button" onClick={handleSetManualLocation} className="w-full py-2 px-4 bg-amber-600 text-white font-semibold rounded-md hover:bg-amber-700 transition-colors">{t('main.setLocationButton')}</button>
                                 </div>
-                                {props.selectedLocation && (
-                                    <div className="text-center bg-slate-800 p-3 rounded-md mb-6"><p className="text-sm text-slate-400">{t('main.selectedLocation')}</p><p className="font-mono text-emerald-300">{props.selectedLocation.lat.toFixed(4)}, {props.selectedLocation.lng.toFixed(4)}</p></div>
+                                {props.selectedLocation && !showNeedLayer && (
+                                    <div className="text-center bg-slate-900/50 p-3 rounded-md mb-6"><p className="text-sm text-slate-400">{t('main.selectedLocation')}</p><p className="font-mono text-emerald-300">{props.selectedLocation.lat.toFixed(4)}, {props.selectedLocation.lng.toFixed(4)}</p></div>
                                 )}
                                  <div className="pt-4 border-t border-slate-700 space-y-4">
+                                    <h3 className="font-bold text-center text-lg">{t('main.analysisProgress')}</h3>
                                     <label htmlFor="reforestation-goal" className="block text-sm font-medium text-slate-300">{t('main.reforestationGoalLabel')}</label>
-                                    <input type="number" id="reforestation-goal" value={props.reforestationGoal} onChange={(e) => props.onReforestationGoalChange(parseInt(e.target.value, 10) || 0)} className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-white focus:ring-emerald-500 focus:border-emerald-500" min="1" step="100" />
+                                    <input type="number" id="reforestation-goal" value={props.reforestationGoal} onChange={(e) => props.onReforestationGoalChange(parseInt(e.target.value, 10) || 0)} className="w-full bg-slate-900/50 border border-slate-600 rounded-md p-2 text-white focus:ring-emerald-500 focus:border-emerald-500" min="1" step="100" />
                                     <label htmlFor="tree-count" className="block text-sm font-medium text-slate-300">{t('main.numberOfTreesLabel')}</label>
-                                    <input type="number" id="tree-count" value={props.numberOfTrees} onChange={(e) => props.onNumberOfTreesChange(parseInt(e.target.value, 10) || 0)} className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-white focus:ring-emerald-500 focus:border-emerald-500" min="1" step="10" />
-                                    <div className="flex justify-between items-center text-xs text-slate-300"><p>{t('main.analysisProgress')}</p><p>{props.numberOfTrees.toLocaleString()} / {props.reforestationGoal.toLocaleString()}</p></div>
-                                    <div className="w-full bg-slate-800 rounded-full h-2.5"><div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }} role="progressbar" aria-valuenow={progressPercentage}></div></div>
-                                    <button onClick={handleFindAreas} disabled={!map || currentLoading === 'areas'} className="w-full py-3 px-4 bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center">{currentLoading === 'areas' ? <><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white mr-2"></div>{t('loading')}</> : t('main.findAreas')}</button>
-                                    <p className="text-xs text-slate-400 mt-2 text-center">{t('main.findAreasDescription')}</p>
-                                    <GroundingReferences chunks={suggestedAreasGrounding} t={t} />
+                                    <input type="number" id="tree-count" value={props.numberOfTrees} onChange={(e) => props.onNumberOfTreesChange(parseInt(e.target.value, 10) || 0)} className="w-full bg-slate-900/50 border border-slate-600 rounded-md p-2 text-white focus:ring-emerald-500 focus:border-emerald-500" min="1" step="10" />
+                                    <div className="flex justify-between items-center text-xs text-slate-300"><p>{props.numberOfTrees.toLocaleString()} / {props.reforestationGoal.toLocaleString()}</p></div>
+                                    <div className="w-full bg-slate-700 rounded-full h-2.5"><div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }} role="progressbar" aria-valuenow={progressPercentage}></div></div>
                                 </div>
+
                                 <div className="space-y-4 pt-4 mt-4 border-t border-slate-700">
-                                    <h3 className="font-bold text-center text-lg">{t('main.selectedLocation')}</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                      <button onClick={props.onTodaysSuggestion} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'today-suggestion' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-calendar-day"></i><span>{t('main.suggestForToday')}</span></>)}</button>
-                                      <button onClick={props.onFullAnalysis} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'full-analysis' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-wand-magic-sparkles"></i><span>{t('main.analyzeLocation')}</span></>)}</button>
+                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <button onClick={handleFindAreas} disabled={!map || props.isLoading === 'areas'} className="w-full py-2 px-3 text-sm bg-sky-600 text-white font-semibold rounded-md hover:bg-sky-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center">{props.isLoading === 'areas' ? <><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div></> : t('main.findAreas')}</button>
+                                        <button onClick={handleToggleNeedsLayer} disabled={!map || props.isLoading === 'reforestation-need'} className={`w-full py-2 px-3 text-sm font-semibold rounded-md transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center ${showNeedLayer ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>{props.isLoading === 'reforestation-need' ? <><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div></> : (showNeedLayer ? t('main.hideNeeds') : t('main.showNeeds'))}</button>
                                     </div>
+                                    <p className="text-xs text-slate-400 mt-2 text-center">
+                                       {props.isLoading === 'reforestation-need' ? t('main.findingNeeds') : t('main.findAreasDescription')}
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4 pt-4 mt-4 border-t border-slate-700">
+                                    <div className="flex items-center justify-between bg-slate-900/50 p-3 rounded-md">
+                                        <div className="flex-grow pr-4 rtl:pr-0 rtl:pl-4">
+                                            <label htmlFor="grounding-switch" className="block text-sm font-medium text-slate-200 cursor-pointer">{t('main.useGroundingTitle')}</label>
+                                            <p className="text-xs text-slate-400">{t('main.useGroundingDesc')}</p>
+                                        </div>
+                                        <div className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                id="grounding-switch" 
+                                                className="sr-only peer" 
+                                                checked={props.useGrounding}
+                                                onChange={(e) => props.onUseGroundingChange(e.target.checked)}
+                                            />
+                                            <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] rtl:after:right-[2px] rtl:after:left-auto after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                        </div>
+                                    </div>
+                                    <button onClick={props.onFullAnalysis} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'full-analysis' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-wand-magic-sparkles"></i><span>{t('main.analyzeLocation')}</span></>)}</button>
                                 </div>
                             </div>
-                            <div className="lg:col-span-2 h-96 lg:h-[650px] bg-slate-900 rounded-lg border border-slate-800 shadow-lg flex items-center justify-center p-4 relative overflow-hidden">
-                                {map && (<div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10"><div className="bg-slate-800/80 backdrop-blur-sm rounded-lg p-1 flex items-stretch space-x-1 rtl:space-x-reverse border border-slate-700 shadow-lg">{mapTypes.map(type => (<button key={type.id} onClick={() => handleMapTypeChange(type.id as keyof typeof mapTiles)} className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors flex items-center justify-center space-x-2 rtl:space-x-reverse ${activeMapType === type.id ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-slate-700/50'}`} title={type.label}><i className={`${type.icon} text-base`}></i><span className="hidden sm:inline">{type.label}</span></button>))}</div></div>)}
-                                {map && <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                                    <button onClick={handleLocateUser} disabled={isLocating} className="w-10 h-10 bg-slate-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700/80 border border-slate-700 shadow-lg transition-colors" title={t('main.locateMe')}>{isLocating ? <div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div> : <i className="fa-solid fa-location-crosshairs text-lg"></i>}</button>
-                                    <button onClick={() => setIsSelectingArea(!isSelectingArea)} className={`w-10 h-10 backdrop-blur-sm rounded-lg flex items-center justify-center border shadow-lg transition-colors ${isSelectingArea ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-700/80 border-slate-700'}`} title={t('main.selectAreaOnMap')}><i className="fa-solid fa-vector-square text-lg"></i></button>
-                                </div>}
+                            <div className="lg:col-span-2 h-96 lg:h-[650px] bg-slate-800 rounded-lg border border-white/10 shadow-lg flex items-center justify-center p-4 relative overflow-hidden">
+                                {map && (<div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10"><div className="bg-slate-900/70 backdrop-blur-sm rounded-lg p-1 flex space-x-1 rtl:space-x-reverse border border-white/20 shadow-lg">{mapTypes.map(type => (<button key={type.id} onClick={() => handleMapTypeChange(type.id as keyof typeof mapTiles)} className={`px-4 py-2 text-xs font-semibold rounded-md transition-colors flex items-center justify-center space-x-2 rtl:space-x-reverse ${activeMapType === type.id ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-slate-700'}`} title={type.label}><i className={`${type.icon} text-base`}></i><span className="hidden sm:inline">{type.label}</span></button>))}</div></div>)}
                                 {map && <MapLegend items={legendItems} />}
+                                {map && (
+                                    <div ref={dataLayersPanelRef} className="absolute top-4 end-4 z-[1000]">
+                                        <div className="relative">
+                                            <button onClick={() => setIsDataLayerPanelOpen(!isDataLayerPanelOpen)} className="bg-slate-900/70 backdrop-blur-sm rounded-lg p-2 w-10 h-10 flex items-center justify-center border border-white/20 shadow-lg text-white hover:bg-slate-800 transition-colors" title={t('mapDataLayers.title')}>
+                                                <i className="fa-solid fa-layer-group text-xl"></i>
+                                            </button>
+                                            {isDataLayerPanelOpen && (
+                                                <div className="absolute top-full end-0 mt-2 w-64 bg-slate-800/90 backdrop-blur-md rounded-lg p-4 border border-white/20 shadow-lg animate-fade-in">
+                                                    <h4 className="font-bold text-sm text-white mb-3">{t('mapDataLayers.title')}</h4>
+                                                    <div className="space-y-2">
+                                                        {Object.values(availableDataLayers).map(layer => (
+                                                            <label key={layer.id} className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={dataLayers[layer.id]?.active || false}
+                                                                    onChange={() => toggleDataLayer(layer.id as keyof typeof availableDataLayers)}
+                                                                    className="h-4 w-4 rounded bg-slate-700 border-slate-500 text-emerald-500 focus:ring-emerald-500 accent-emerald-500"
+                                                                />
+                                                                <span className="text-sm text-slate-200">{layer.name}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 <div ref={mapRef} className="w-full h-full rounded-md" />
-                                {!map && (<div className="absolute inset-0 w-full h-full bg-slate-900 rounded-lg animate-pulse flex items-center justify-center text-slate-400 flex-col"><svg className="w-12 h-12 mb-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.5-11.492A10.5 10.5 0 0 1 21.75 10.5c0 2.512-1.023 4.79-2.688 6.438a10.378 10.378 0 0 1-2.862 2.115M4.933 4.933a10.5 10.5 0 0 1 14.134 0M4.25 10.5a10.5 10.5 0 0 0 2.688 6.438c.954.954 2.068 1.685 3.28 2.115M19.067 4.933a10.5 10.5 0 0 0-14.134 0" /></svg><p className="font-semibold">{t('main.loadingMap')}</p></div>)}
+                                {!map && (<div className="absolute inset-0 w-full h-full bg-slate-700 rounded-lg animate-pulse flex items-center justify-center text-slate-400 flex-col"><svg className="w-12 h-12 mb-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.5-11.492A10.5 10.5 0 0 1 21.75 10.5c0 2.512-1.023 4.79-2.688 6.438a10.378 10.378 0 0 1-2.862 2.115M4.933 4.933a10.5 10.5 0 0 1 14.134 0M4.25 10.5a10.5 10.5 0 0 0 2.688 6.438c.954.954 2.068 1.685 3.28 2.115M19.067 4.933a10.5 10.5 0 0 0-14.134 0" /></svg><p className="font-semibold">{t('main.loadingMap')}</p></div>)}
                             </div>
                         </div>
                         {props.selectedLocation && (
                             <section className="mt-8 space-y-8">
                                 {props.error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{props.error}</div>}
-                                <InfoCard 
-                                    title={t('results.suggestionTitle')} 
-                                    icon="fa-solid fa-tree" 
-                                    isLoading={props.isLoading === 'full-analysis' || props.isLoading === 'today-suggestion'}
-                                    loadingSkeleton={<PlantingSuggestionSkeleton />}
-                                >
-                                    <PlantingSuggestionDisplay {...props} />
-                                </InfoCard>
+                                <InfoCard title={t('results.suggestionTitle')} icon="fa-solid fa-tree" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<PlantingSuggestionSkeleton />}><PlantingSuggestionDisplay {...props} /></InfoCard>
                                 {(props.isLoading === 'campaign' || props.crowdfundingCampaign) && (<InfoCard title={t('campaign.title')} icon="fa-solid fa-hand-holding-dollar" isLoading={props.isLoading === 'campaign'}><CampaignDisplay {...props} /></InfoCard>)}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <InfoCard title={t('results.vegetationTitle')} icon="fa-solid fa-seedling" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<VegetationAnalysisSkeleton />} tooltipText={t('results.vegetationTooltip')}><VegetationAnalysisDisplay {...props} /></InfoCard>
-                                    <InfoCard title={t('results.riskTitle')} icon="fa-solid fa-triangle-exclamation" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<RiskAnalysisSkeleton />} tooltipText={t('results.riskTooltip')}><RiskAnalysisDisplay {...props} /></InfoCard>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <InfoCard title={t('results.vegetationTitle')} icon="fa-solid fa-seedling" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<VegetationAnalysisSkeleton />}><VegetationAnalysisDisplay {...props} /></InfoCard>
+                                    <InfoCard title={t('results.riskTitle')} icon="fa-solid fa-triangle-exclamation" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<RiskAnalysisSkeleton />}><RiskAnalysisDisplay {...props} /></InfoCard>
+                                     <InfoCard title={t('weather.title')} icon="fa-solid fa-cloud-sun" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<WeatherDisplaySkeleton />}>
+                                        <WeatherDisplay weatherData={props.weatherData} onFetchWeather={props.onFetchWeather} isLoading={props.isLoading === 'weather'} />
+                                    </InfoCard>
                                 </div>
                             </section>
                         )}
                     </div>
                 )}
                 {activeView === 'homeGardening' && (<div className="animate-fade-in"><HomeGardeningPage /></div>)}
-                {activeView === 'startupShowcase' && (<div className="animate-fade-in"><StartupShowcase /></div>)}
             </section>
         </div>
     );

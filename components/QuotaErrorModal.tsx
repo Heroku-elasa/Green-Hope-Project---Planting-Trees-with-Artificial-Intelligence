@@ -12,9 +12,9 @@ const QuotaErrorModal: React.FC<QuotaErrorModalProps> = ({ isOpen, onClose }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fade-in" aria-modal="true" role="dialog">
-      <div className="bg-slate-900 rounded-lg shadow-xl p-6 w-full max-w-md mx-4 border border-slate-700">
+      <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4 border border-red-500/50">
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-500/10">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-900">
             <svg className="h-6 w-6 text-red-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -38,7 +38,7 @@ const QuotaErrorModal: React.FC<QuotaErrorModalProps> = ({ isOpen, onClose }) =>
           <button
             type="button"
             onClick={onClose}
-            className="w-full inline-flex justify-center rounded-md border border-slate-700 shadow-sm px-4 py-2 bg-slate-800 text-base font-medium text-white hover:bg-slate-700 focus:outline-none sm:text-sm"
+            className="w-full inline-flex justify-center rounded-md border border-gray-600 shadow-sm px-4 py-2 bg-gray-700 text-base font-medium text-white hover:bg-gray-600 focus:outline-none sm:text-sm"
           >
             {t('quotaErrorModal.close')}
           </button>

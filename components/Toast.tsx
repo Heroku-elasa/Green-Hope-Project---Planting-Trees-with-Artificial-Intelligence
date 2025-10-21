@@ -16,9 +16,9 @@ const ICONS: Record<ToastType, React.ReactNode> = {
 };
 
 const STYLES: Record<ToastType, { bg: string; text: string; border: string }> = {
-  error: { bg: 'bg-red-900/90', text: 'text-red-200', border: 'border-red-700/50' },
-  success: { bg: 'bg-green-900/90', text: 'text-green-200', border: 'border-green-700/50' },
-  info: { bg: 'bg-blue-900/90', text: 'text-blue-200', border: 'border-blue-700/50' },
+  error: { bg: 'bg-red-900/80', text: 'text-red-200', border: 'border-red-600/50' },
+  success: { bg: 'bg-green-900/80', text: 'text-green-200', border: 'border-green-600/50' },
+  info: { bg: 'bg-amber-900/80', text: 'text-amber-200', border: 'border-amber-600/50' },
 };
 
 const Toast: React.FC<ToastProps> = ({ id, message, type, onClose }) => {

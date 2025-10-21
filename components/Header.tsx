@@ -21,12 +21,12 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ onLogoClick }) => {
   }, []);
   
   return (
-    <header className="bg-slate-950/80 backdrop-blur-sm sticky top-0 z-50 border-b border-slate-800">
+    <header className="bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50 border-b border-white/10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center">
             <button onClick={onLogoClick} className="flex-shrink-0 flex items-center space-x-3 rtl:space-x-reverse transform transition-transform hover:scale-105">
-               <i className="fa-solid fa-tree text-3xl text-emerald-500"></i>
+               <i className="fa-solid fa-tree text-3xl text-emerald-400"></i>
               <span className="font-bold text-xl text-white">{t('header.title')}</span>
             </button>
           </div>
@@ -37,25 +37,25 @@ const SiteHeader: React.FC<SiteHeaderProps> = ({ onLogoClick }) => {
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m4 13l4-4M19 9l-4 4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 </button>
                 {isLangMenuOpen && (
-                    <div className="absolute end-0 mt-2 w-48 rounded-md shadow-lg bg-slate-900 ring-1 ring-slate-700 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="language-menu">
+                    <div className="absolute end-0 mt-2 w-48 rounded-md shadow-lg bg-gray-800 ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu" aria-orientation="vertical" aria-labelledby="language-menu">
                         <div className="p-1" role="none">
                             <button 
                                 onClick={() => { setLanguage('en'); setIsLangMenuOpen(false); }} 
-                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'en' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'en' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
                                 role="menuitem"
                             >
                                 English
                             </button>
                             <button 
                                 onClick={() => { setLanguage('fa'); setIsLangMenuOpen(false); }} 
-                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'fa' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'fa' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
                                 role="menuitem"
                             >
                                 فارسی (Persian)
                             </button>
                             <button 
                                 onClick={() => { setLanguage('ar'); setIsLangMenuOpen(false); }} 
-                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'ar' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                                className={`w-full text-left block px-4 py-2 text-sm rounded-md transition-colors ${language === 'ar' ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'}`}
                                 role="menuitem"
                             >
                                 العربية (Arabic)

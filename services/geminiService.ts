@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { 
     Language,
     PlantingSuggestion,
@@ -7,114 +7,243 @@ import {
     CrowdfundingCampaign,
     PlantingArea,
     HomePlant,
-    GroundingChunk,
+    GroundingSource,
+    WeatherData,
+    ReforestationArea,
+    FullAnalysis,
 } from '../types';
 
-// FIX: Per @google/genai guidelines, initialize the AI client directly,
-// assuming the API_KEY environment variable is always available.
-// FIX: Per @google/genai guidelines, use `process.env.API_KEY` to get the API key.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-/**
- * Parses a string that is expected to be a JSON object.
- * It handles cases where the JSON is wrapped in markdown-style code blocks.
- * @param text The raw text response from the model.
- * @returns The parsed JavaScript object.
- * @throws An error if the JSON is invalid.
- */
-const parseJsonResponse = (text: string): any => {
-    // Try to find JSON within ```json ... ```
-    const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
-    const match = text.match(jsonRegex);
-    const jsonString = match ? match[1] : text;
+const suggestionSchema = {
+    type: Type.OBJECT,
+    properties: {
+        summary: { type: Type.STRING, description: "A two-sentence summary of the area's potential for tree planting." },
+        suitableSpecies: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "Name of the tree species." },
+                    reason: { type: Type.STRING, description: "Reason why this species is suitable for the area (climate, soil, biodiversity)." },
+                    estimatedCostPerTree: {
+                        type: Type.OBJECT,
+                        properties: {
+                           min: { type: Type.NUMBER, description: "Minimum estimated cost per sapling in USD." },
+                           max: { type: Type.NUMBER, description: "Maximum estimated cost per sapling in USD." }
+                        },
+                         required: ["min", "max"]
+                    },
+                    bestPlantingTime: { type: Type.STRING, description: "Best time or season to plant this species (e.g., 'Early Spring')." },
+                    initialWateringNeeds: { type: Type.STRING, description: "Initial watering requirements (e.g., 'Twice a week for 90 days')." },
+                    protectionDuration: { type: Type.STRING, description: "Duration needed to protect the saplings (e.g., '2-3 years')." },
+                },
+                required: ["name", "reason", "estimatedCostPerTree", "bestPlantingTime", "initialWateringNeeds", "protectionDuration"],
+            },
+        },
+    },
+    required: ["summary", "suitableSpecies"],
+};
+
+const vegetationSchema = {
+    type: Type.OBJECT,
+    properties: {
+        coveragePercentage: { type: Type.NUMBER, description: "A placeholder field, return 0. The analysis text is what matters." },
+        reforestationNeed: { type: Type.STRING, enum: ['Low', 'Medium', 'High'], description: "The level of need for reforestation." },
+        analysis: { type: Type.STRING, description: "A brief qualitative analysis of the current vegetation status (e.g., dense forest, sparse scrubland) and the reason for the reforestation need." },
+    },
+    required: ["coveragePercentage", "reforestationNeed", "analysis"],
+};
+
+const riskSchema = {
+    type: Type.OBJECT,
+    properties: {
+        overallRiskScore: { type: Type.NUMBER, description: "An overall risk score from 0 to 100, where 100 is the highest risk." },
+        risks: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    name: { type: Type.STRING, description: "Name of the risk (e.g., 'Environmental Regulations', 'Wildfire Hazard')." },
+                    severity: { type: Type.STRING, enum: ['Low', 'Medium', 'High'], description: "The severity of the risk." },
+                    explanation: { type: Type.STRING, description: "A brief explanation of the risk and its impact." },
+                },
+                required: ["name", "severity", "explanation"],
+            },
+        },
+    },
+    required: ["overallRiskScore", "risks"],
+};
+
+const fullAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        plantingSuggestion: suggestionSchema,
+        vegetationAnalysis: vegetationSchema,
+        riskAnalysis: riskSchema,
+    },
+    required: ["plantingSuggestion", "vegetationAnalysis", "riskAnalysis"],
+};
+
+const campaignSchema = {
+    type: Type.OBJECT,
+    properties: {
+        title: { type: Type.STRING, description: "A catchy title for the campaign." },
+        description: { type: Type.STRING, description: "A two-paragraph description for the campaign." },
+    },
+    required: ["title", "description"],
+};
+
+const areasSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            location: {
+                type: Type.OBJECT,
+                properties: {
+                    lat: { type: Type.NUMBER, description: "Latitude of the suggested area." },
+                    lng: { type: Type.NUMBER, description: "Longitude of the suggested area." },
+                },
+                required: ["lat", "lng"],
+            },
+            reason: { type: Type.STRING, description: "A brief reason why this area is suitable." },
+        },
+        required: ["location", "reason"],
+    },
+};
+
+const reforestationAreasSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            location: {
+                type: Type.OBJECT,
+                properties: {
+                    lat: { type: Type.NUMBER, description: "Latitude of the area in need." },
+                    lng: { type: Type.NUMBER, description: "Longitude of the area in need." },
+                },
+                required: ["lat", "lng"],
+            },
+            need: { type: Type.STRING, enum: ['Low', 'Medium', 'High'], description: "The level of need for reforestation." },
+            reason: { type: Type.STRING, description: "A brief reason for the reforestation need level." },
+        },
+        required: ["location", "need", "reason"],
+    },
+};
+
+const homePlantsSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            name: { type: Type.STRING, description: "The common name of the plant." },
+            type: { type: Type.STRING, description: "The type of plant (e.g., 'Flowering Plant', 'Herb', 'Succulent')." },
+            careInstructions: { type: Type.STRING, description: "Simple, brief care instructions for the plant." },
+            suitableFor: { type: Type.STRING, description: "What environment it is best suited for (e.g., 'small pots', 'hanging baskets')." },
+        },
+        required: ["name", "type", "careInstructions", "suitableFor"],
+    },
+};
+
+const weatherSchema = {
+    type: Type.OBJECT,
+    properties: {
+        temperature: { type: Type.NUMBER, description: "Current temperature in Celsius." },
+        precipitationProbability: { type: Type.NUMBER, description: "Probability of precipitation as a percentage (0-100)." },
+        windSpeed: { type: Type.NUMBER, description: "Wind speed in kilometers per hour (km/h)." },
+        summary: { type: Type.STRING, description: "A brief one-sentence summary of the weather conditions."}
+    },
+    required: ["temperature", "precipitationProbability", "windSpeed", "summary"],
+};
+
+const parseGroundingSources = (response: GenerateContentResponse): GroundingSource[] => {
+    const sources: GroundingSource[] = [];
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    if (chunks) {
+        for (const chunk of chunks) {
+            if (chunk.web && chunk.web.uri) {
+                sources.push({ uri: chunk.web.uri, title: chunk.web.title || chunk.web.uri, type: 'web' });
+            } else if (chunk.maps && chunk.maps.uri) {
+                sources.push({ uri: chunk.maps.uri, title: chunk.maps.title || chunk.maps.uri, type: 'maps' });
+            }
+        }
+    }
+    // De-duplicate sources
+    return [...new Map(sources.map(item => [item.uri, item])).values()];
+};
+
+function cleanAndParseJson(text: string) {
+    const trimmedText = text.trim();
+    const jsonMatch = trimmedText.match(/^```json\s*([\s\S]*?)\s*```$/);
+    if (jsonMatch && jsonMatch[1]) {
+        return JSON.parse(jsonMatch[1]);
+    }
+    return JSON.parse(trimmedText);
+}
+
+export const getFullAnalysis = async (location: { lat: number; lng: number }, language: Language, useGrounding: boolean): Promise<FullAnalysis> => {
+    let prompt = `Perform a comprehensive environmental analysis for the location at latitude ${location.lat} and longitude ${location.lng}. Provide the output in ${language} and in a single JSON object that strictly adheres to the schema. The analysis should include three sections:
+
+1.  **Planting Suggestion**: Suggest 3 suitable native tree species. For each species, provide: reason for suitability, estimated cost per sapling in USD (min/max), best planting time, initial watering needs, and protection duration. Also include a general summary.
+
+2.  **Vegetation Analysis**: Provide a qualitative description of the current vegetation cover (e.g., 'dense forest', 'sparse scrubland', 'arid') in the 'analysis' field. Instead of a numeric percentage, describe the vegetation. Based on this, assess the reforestation need as 'Low', 'Medium', or 'High'. For the 'coveragePercentage' field, return 0 as a placeholder.
+
+3.  **Risk Analysis**: For a project to plant 1000 trees, analyze potential risks (e.g., environmental laws, climate impacts like drought/wildfires, ecological risks). Provide a list of risks with their severity ('Low', 'Medium', 'High') and an explanation. Calculate an overall risk score from 0 to 100.`;
+
+    const config: any = {};
+    if (useGrounding) {
+        prompt = `Using Google Search for the most current and localized information, ${prompt}`;
+        config.tools = [{googleSearch: {}}, {googleMaps: {}}];
+    } else {
+        config.responseMimeType = "application/json";
+        config.responseSchema = fullAnalysisSchema;
+    }
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+    });
+    
+    const sources = useGrounding ? parseGroundingSources(response) : undefined;
+    
+    let parsedJson: any;
 
     try {
-        return JSON.parse(jsonString);
+        parsedJson = cleanAndParseJson(response.text);
     } catch (e) {
-        console.error("Failed to parse JSON response:", jsonString, e);
-        throw new Error("Invalid JSON response from API.");
+        console.error("Failed to parse JSON from full analysis response:", response.text, e);
+        const errorMessage = `The model provided a response that could not be parsed as JSON. Please see the raw output below.\n\n---\n\n${response.text}`;
+        return {
+            plantingSuggestion: {
+                summary: errorMessage,
+                suitableSpecies: [],
+            },
+            vegetationAnalysis: {
+                 analysis: "Failed to parse model response.",
+                 coveragePercentage: 0,
+                 reforestationNeed: 'Low',
+            },
+            riskAnalysis: {
+                overallRiskScore: 0,
+                risks: [{ name: "Response Parsing Error", severity: "High", explanation: "Failed to parse model response." }],
+            },
+            sources: sources
+        };
     }
+
+    return {
+        plantingSuggestion: parsedJson.plantingSuggestion,
+        vegetationAnalysis: parsedJson.vegetationAnalysis,
+        riskAnalysis: parsedJson.riskAnalysis,
+        sources: sources,
+    };
 };
 
-
-const getCurrencyInfo = (language: Language): { name: string, code: string, context: string } => {
-    switch (language) {
-        case 'fa':
-            return { 
-                name: 'Iranian Toman', 
-                code: 'IRT',
-                context: "Please provide realistic, local market prices in Iranian Toman. For reference, a common sapling might cost between 20,000 and 150,000 Toman. Base your estimate on the species type and typical nursery prices in the region."
-            };
-        case 'ar':
-            return { 
-                name: 'Saudi Riyal', 
-                code: 'SAR',
-                context: "Please provide realistic, local market prices in Saudi Riyal. For reference, a common sapling might cost between 10 and 50 SAR. Base your estimate on the species type and typical nursery prices in Saudi Arabia."
-            };
-        case 'en':
-        default:
-            return { 
-                name: 'USD', 
-                code: 'USD',
-                context: "Base your estimate on the species type and typical nursery prices in USD for a young sapling, which often range from $1 to $10."
-            };
-    }
-};
-
-export const getPlantingSuggestion = async (location: { lat: number; lng: number }, language: Language): Promise<PlantingSuggestion> => {
-    const currency = getCurrencyInfo(language);
-    const prompt = `For the geographic location with latitude ${location.lat} and longitude ${location.lng}, suggest 3 suitable native tree species for planting. Use Google Search for up-to-date, local information. For each species, provide:
-1. Reason for suitability (climate, soil, biodiversity).
-2. Estimated cost per sapling in ${currency.name} (${currency.code}) (a numerical min/max range). ${currency.context}
-3. Best time/season for planting.
-4. Initial watering needs.
-5. Duration of protection needed for saplings.
-Also provide a general summary. The response must be in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-             tools: [{googleSearch: {}}],
-        },
-    });
-    
-    const result: PlantingSuggestion = parseJsonResponse(response.text);
-    result.grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return result;
-};
-
-export const getTodaysPlantingSuggestion = async (location: { lat: number; lng: number }, language: Language): Promise<PlantingSuggestion> => {
-    const currency = getCurrencyInfo(language);
-    const today = new Date().toLocaleDateString(language === 'fa' ? 'fa-IR-u-nu-latn' : language, { year: 'numeric', month: 'long', day: 'numeric' });
-    const prompt = `For the geographic location with latitude ${location.lat} and longitude ${location.lng}, and considering today's date is ${today}, suggest 3 native tree species ideal for planting RIGHT NOW.
-If today is NOT a good day, your summary must clearly explain why (e.g., wrong season, too hot) and suggest the next best time to plant. Otherwise, the summary should confirm it's a good time.
-Use Google Search for up-to-date, local information. For each species, provide:
-1. Reason for suitability (climate, soil, biodiversity).
-2. Estimated cost per sapling in ${currency.name} (${currency.code}) (a numerical min/max range). ${currency.context}
-3. Best time/season for planting (confirming if now is appropriate).
-4. Initial watering needs.
-5. Duration of protection needed for saplings.
-The response must be in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-             tools: [{googleSearch: {}}],
-        },
-    });
-    
-    const result: PlantingSuggestion = parseJsonResponse(response.text);
-    result.grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return result;
-};
-
-export const getVegetationAnalysis = async (location: { lat: number; lng: number }, language: Language): Promise<VegetationAnalysis> => {
-    const prompt = `Analyze the current vegetation cover for the area around latitude ${location.lat} and longitude ${location.lng}. Use Google Search to get recent, relevant data. Provide the percentage of vegetation cover, the level of reforestation need (Low, Medium, High), and a brief analysis. The response must be in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
+export const getWeatherData = async (location: { lat: number; lng: number }, language: Language): Promise<WeatherData> => {
+    const prompt = `Using Google Search for real-time data, provide the current weather for latitude ${location.lat}, longitude ${location.lng}. I need temperature in Celsius, precipitation probability as a percentage (0-100), and wind speed in kilometers per hour (km/h). Also provide a brief, one-sentence summary of the conditions. The response must be in ${language} and in JSON format.`;
 
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -124,30 +253,21 @@ IMPORTANT: Your entire response must be a single, valid JSON object, without any
         },
     });
 
-    const result: VegetationAnalysis = parseJsonResponse(response.text);
-    result.grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return result;
-};
+    const sources = parseGroundingSources(response);
 
-export const getRiskAnalysis = async (location: { lat: number; lng: number }, numberOfTrees: number, language: Language): Promise<RiskAnalysis> => {
-    const prompt = `For a project to plant ${numberOfTrees} trees at latitude ${location.lat} and longitude ${location.lng}, analyze potential risks. Use Google Search for local environmental laws, climate impacts (drought, wildfires), and ecological risks. Provide a list of risks. For each risk, include:
-1. 'name' (string).
-2. 'severity' ('Low', 'Medium', or 'High').
-3. 'explanation' (string).
-4. 'location' (an object with 'lat' and 'lng') IF the risk is tied to a specific point (e.g., a factory for pollution). This is optional.
-Also, calculate an 'overallRiskScore' from 0 to 100. Respond in ${language}.
-IMPORTANT: The entire response must be a single, valid JSON object without markdown.`;
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-            tools: [{googleSearch: {}}],
-        },
-    });
-    
-    const result: RiskAnalysis = parseJsonResponse(response.text);
-    result.grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return result;
+    try {
+        const parsedJson = cleanAndParseJson(response.text);
+        return { ...parsedJson, sources };
+    } catch (e) {
+        console.error("Failed to parse JSON from weather response:", response.text, e);
+        return {
+            temperature: 0,
+            precipitationProbability: 0,
+            windSpeed: 0,
+            summary: `The model provided a response that could not be parsed as JSON. Please see the raw output below.\n\n---\n\n${response.text}`,
+            sources: sources,
+        };
+    }
 };
 
 export const generateCrowdfundingCampaign = async (suggestion: PlantingSuggestion, location: { lat: number; lng: number }, language: Language): Promise<CrowdfundingCampaign> => {
@@ -158,61 +278,103 @@ export const generateCrowdfundingCampaign = async (suggestion: PlantingSuggestio
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    title: { type: Type.STRING },
-                    description: { type: Type.STRING },
-                },
-                required: ["title", "description"],
-            },
+            responseSchema: campaignSchema,
         },
     });
-    // The response is already a JSON object when responseMimeType is application/json.
-    const result = JSON.parse(response.text);
-    return result;
+    return JSON.parse(response.text);
 };
 
-export const findPlantingAreas = async (bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }, treeCount: number, language: Language): Promise<{ areas: PlantingArea[], grounding?: GroundingChunk[] }> => {
-    const prompt = `Within the map area from Southwest corner ${bounds.sw.lat},${bounds.sw.lng} to Northeast corner ${bounds.ne.lat},${bounds.ne.lng}, identify up to 5 distinct locations suitable for planting ${treeCount} trees. Use Google Maps to focus on areas with low vegetation, wastelands, or areas in need of ecological restoration. For each location, provide the precise latitude and longitude, and a brief one-sentence reason for its suitability. Respond in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON array of objects, without any markdown formatting or other text. Each object must have 'location' ({lat, lng}) and 'reason' (string).`;
-    const centerLat = (bounds.sw.lat + bounds.ne.lat) / 2;
-    const centerLng = (bounds.sw.lng + bounds.ne.lng) / 2;
+export const findPlantingAreas = async (bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }, treeCount: number, language: Language, useGrounding: boolean): Promise<PlantingArea[]> => {
+    let prompt = `Within the map area from Southwest corner ${bounds.sw.lat},${bounds.sw.lng} to Northeast corner ${bounds.ne.lat},${bounds.ne.lng}, identify up to 5 distinct locations suitable for planting ${treeCount} trees. Focus on areas with low vegetation or in need of ecological restoration. For each location, provide the precise latitude and longitude, and a brief one-sentence reason for its suitability. Respond in ${language} as a JSON array that strictly matches the schema.`;
+    
+    const config: any = {};
+    if (useGrounding) {
+        prompt = `Using Google Search to identify suitable land based on recent data, ${prompt}`;
+        config.tools = [{googleSearch: {}}];
+    } else {
+        config.responseMimeType = "application/json";
+        config.responseSchema = areasSchema;
+    }
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config,
+    });
+
+    if (!useGrounding) {
+        return JSON.parse(response.text);
+    }
+
+    try {
+        return cleanAndParseJson(response.text);
+    } catch(e) {
+        console.error("Failed to parse JSON for planting areas:", response.text, e);
+        return [];
+    }
+};
+
+export const findReforestationAreas = async (bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }, language: Language): Promise<ReforestationArea[]> => {
+    const prompt = `Within the map area from Southwest corner ${bounds.sw.lat},${bounds.sw.lng} to Northeast corner ${bounds.ne.lat},${bounds.ne.lng}, identify up to 15 locations that need reforestation. Classify each location's need as 'High', 'Medium', or 'Low' based on visible deforestation, aridness, or proximity to urban areas. For each location, provide precise latitude/longitude and a very brief reason. Respond in ${language} as a JSON array that strictly matches the schema.`;
     
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
-            tools: [{googleMaps: {}}],
-            toolConfig: {
-              retrievalConfig: {
-                latLng: {
-                  latitude: centerLat,
-                  longitude: centerLng
-                }
-              }
-            }
+            responseMimeType: "application/json",
+            responseSchema: reforestationAreasSchema,
         },
     });
-    
-    const areas: PlantingArea[] = parseJsonResponse(response.text);
-    const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return { areas, grounding };
+
+    try {
+        return JSON.parse(response.text);
+    } catch(e) {
+        console.error("Failed to parse JSON for reforestation areas:", response.text, e);
+        return [];
+    }
 };
 
-export const getHomeGardeningSuggestions = async (condition: string, language: Language): Promise<{ suggestions: HomePlant[], grounding?: GroundingChunk[] }> => {
-    const prompt = `Suggest 3 to 5 plants suitable for home gardening in a '${condition}' environment. Use Google Search to find interesting and suitable plants. For each plant, provide its common name, its type (e.g., 'Flowering Plant', 'Herb', 'Succulent'), simple care instructions, and what it's best for (e.g., 'small pots', 'hanging baskets'). Respond in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON array of objects, without any markdown formatting or other text.`;
+export const analyzePolygonArea = async (polygon: { lat: number, lng: number }[], treeCount: number, language: Language, useGrounding: boolean): Promise<PlantingArea[]> => {
+    const polygonString = polygon.map(p => `(${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`).join(', ');
+    let prompt = `Within the polygon defined by these vertices: ${polygonString}, identify up to 5 distinct locations suitable for planting ${treeCount} trees. Focus on areas with low vegetation or in need of ecological restoration. For each location, provide the precise latitude and longitude, and a brief one-sentence reason for its suitability. Respond in ${language} as a JSON array that strictly matches the schema.`;
+    
+    const config: any = {};
+    if (useGrounding) {
+        prompt = `Using Google Search to identify suitable land based on recent data, ${prompt}`;
+        config.tools = [{googleSearch: {}}];
+    } else {
+        config.responseMimeType = "application/json";
+        config.responseSchema = areasSchema;
+    }
     
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
-        config: {
-             tools: [{googleSearch: {}}],
-        },
+        config,
     });
 
-    const suggestions: HomePlant[] = parseJsonResponse(response.text);
-    const grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    return { suggestions, grounding };
+    if (!useGrounding) {
+        return JSON.parse(response.text);
+    }
+    
+    try {
+        return cleanAndParseJson(response.text);
+    } catch(e) {
+        console.error("Failed to parse JSON for polygon areas:", response.text, e);
+        return [];
+    }
+};
+
+
+export const getHomeGardeningSuggestions = async (condition: string, language: Language): Promise<HomePlant[]> => {
+    const prompt = `Suggest 3 to 5 plants suitable for home gardening in a '${condition}' environment. For each plant, provide its common name, its type (e.g., 'Flowering Plant', 'Herb', 'Succulent'), simple care instructions, and what it's best for (e.g., 'small pots', 'hanging baskets'). Respond in ${language} as a JSON array that strictly matches the schema.`;
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: homePlantsSchema,
+        },
+    });
+    return JSON.parse(response.text);
 };

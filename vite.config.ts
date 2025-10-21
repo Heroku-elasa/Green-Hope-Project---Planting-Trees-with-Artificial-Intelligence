@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './',
   // Vite automatically exposes environment variables prefixed with VITE_
   // in `import.meta.env`. The previous `define` block for `process.env`
   // has been removed in favor of using the standard `import.meta.env` object
