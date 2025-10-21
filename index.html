@@ -24,6 +24,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet Draw JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <script>
     tailwind.config = {
@@ -176,13 +185,54 @@
         background-color: #4b5563; /* gray-600 */
         border-radius: 20px;
     }
+    
+    /* Leaflet popup customization */
+    .leaflet-popup-content-wrapper {
+        background: #1f2937; /* gray-800 */
+        color: #d1d5db; /* gray-300 */
+        border-radius: 8px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-content {
+        margin: 12px;
+        font-family: 'Inter', 'Vazirmatn', sans-serif;
+    }
+    .leaflet-popup-tip {
+        background: #1f2937;
+    }
+    .leaflet-popup-close-button {
+        color: #9ca3af !important; /* gray-400 */
+    }
+    .leaflet-popup-close-button:hover {
+        color: #fff !important;
+    }
+
+    /* Leaflet Draw dark theme customization */
+    .leaflet-draw-toolbar a {
+        background-color: #1f2937; /* gray-800 */
+        border-radius: 4px;
+    }
+    .leaflet-draw-toolbar a:hover {
+        background-color: #374151; /* gray-700 */
+    }
+    .leaflet-draw-actions li:first-child a {
+        border-radius: 4px;
+    }
+    .leaflet-draw-actions a {
+        background-color: #374151 !important; /* Important to override leaflet styles */
+        color: #fff !important;
+    }
+    .leaflet-draw-actions a:hover {
+        background-color: #4b5563 !important;
+    }
+    .leaflet-draw-tooltip {
+        background: #1f2937;
+        border: 1px solid #4b5563;
+        color: #d1d5db;
+    }
 
   </style>
 <link rel="stylesheet" href="/index.css">
 </head>
 <body class="bg-slate-900">
-  <div id="root"></div>
-  <script type="module" src="./index.tsx"></script>
-<script type="module" src="/index.tsx"></script>
-</body>
-</html>
+  <div<script type="module" src="/index.tsx"></script>

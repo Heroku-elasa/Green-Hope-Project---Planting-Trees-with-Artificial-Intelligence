@@ -1,48 +1,12 @@
-// FIX: The google.maps types are not available in this build environment. To resolve compilation errors, 
-// the failing triple-slash directive is removed and a minimal set of local type declarations for the Google Maps API is provided below.
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, PlantingSite, SuitableTree, Coords } from '../types';
 import { marked } from 'marked';
+import MapLegend from './MapLegend';
 
 type Mode = 'locations' | 'trees';
 
-// @ts-ignore
-declare global { 
-  interface Window { 
-    initMapSiteSelector: () => void;
-    google: typeof google;
-  } 
-}
-
-// Minimal type declarations for Google Maps to fix compilation errors when types are not found.
-declare namespace google {
-    namespace maps {
-        type MapTypeStyle = any;
-        class Map {
-            constructor(mapDiv: Element | null, opts?: any);
-            addListener(eventName: string, handler: (...args: any[]) => void): any;
-            fitBounds(bounds: any): void;
-            panTo(latLng: any): void;
-            setZoom(zoom: number): void;
-        }
-        class Marker {
-            constructor(opts?: any);
-            setMap(map: Map | null): void;
-            addListener(eventName: string, handler: (...args: any[]) => void): any;
-        }
-        type MapMouseEvent = { latLng: { lat: () => number, lng: () => number } | null };
-        class LatLngBounds {
-            constructor();
-            extend(point: any): void;
-        }
-        class InfoWindow {
-            constructor(opts?: any);
-            open(map: Map, anchor?: any): void;
-        }
-    }
-}
-
+// Declare Leaflet global object to avoid TypeScript errors, as it's loaded from a CDN.
+declare const L: any;
 
 interface SiteSelectorProps {
     onFindLocations: (description: string) => void;
@@ -61,10 +25,111 @@ interface SiteSelectorProps {
     onUseSuggestedGoal: (goal: string) => void;
 }
 
-const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'isLoading' | 'mode' | 'setMode' | 'locationsInput' | 'setLocationsInput' | 'coords' | 'suggestedGoals' | 'isSuggestingGoals' | 'onUseSuggestedGoal'>> = 
-({ onFindLocations, isLoading, mode, setMode, locationsInput, setLocationsInput, coords, suggestedGoals, isSuggestingGoals, onUseSuggestedGoal }) => {
+const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const { t } = useLanguage();
+    const { 
+        onFindLocations, 
+        onFindTrees,
+        results, 
+        isLoading, 
+        error, 
+        mode, 
+        setMode, 
+        locationsInput, 
+        setLocationsInput, 
+        coords, 
+        setCoords, 
+        suggestedGoals, 
+        isSuggestingGoals, 
+        onUseSuggestedGoal 
+    } = props;
     
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<any>(null);
+    const markersRef = useRef<any[]>([]);
+    
+    const [latInput, setLatInput] = useState(coords?.lat.toString() || '');
+    const [lngInput, setLngInput] = useState(coords?.lng.toString() || '');
+
+    useEffect(() => {
+        setLatInput(coords?.lat.toFixed(6) || '');
+        setLngInput(coords?.lng.toFixed(6) || '');
+    }, [coords]);
+
+    useEffect(() => {
+        if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
+            const map = L.map(mapRef.current, {
+                center: [20, 0],
+                zoom: 2,
+            });
+            mapInstanceRef.current = map;
+
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 18,
+            }).addTo(map);
+
+            map.on('click', (e: any) => {
+                 if (mode === 'trees') {
+                    const { lat, lng } = e.latlng;
+                    const latLng = { lat, lng };
+                    setCoords(latLng);
+                    onFindTrees(latLng);
+                }
+            });
+        }
+    }, [mode, onFindTrees, setCoords]);
+
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map) return;
+
+        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current = [];
+
+        const createIcon = (color: string) => {
+            const iconSvg = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="${color}" stroke="white" stroke-width="1"><path d="M12 0C7.31 0 3.5 3.81 3.5 8.5c0 5.25 8.5 15.5 8.5 15.5s8.5-10.25 8.5-15.5C20.5 3.81 16.69 0 12 0zm0 11.5a3 3 0 110-6 3 3 0 010 6z"/></svg>`;
+            const iconUrl = `data:image/svg+xml;base64,${btoa(iconSvg)}`;
+            return L.icon({
+                iconUrl: iconUrl,
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
+        };
+
+        const pinkIcon = createIcon('#ec4899'); // pink-500
+        const blueIcon = createIcon('#3b82f6'); // blue-500
+
+        if (mode === 'locations' && results.length > 0) {
+            const latLngs: any[] = [];
+            results.forEach(result => {
+                const site = result as PlantingSite;
+                if (typeof site.latitude === 'number' && typeof site.longitude === 'number') {
+                    const pos: [number, number] = [site.latitude, site.longitude];
+                    const marker = L.marker(pos, { icon: pinkIcon }).addTo(map)
+                        .bindPopup(`<b>${site.locationName}</b><br>${site.country}`);
+                    markersRef.current.push(marker);
+                    latLngs.push(pos);
+                }
+            });
+            if (latLngs.length > 0) {
+                map.fitBounds(latLngs, { padding: [50, 50] });
+            }
+        } else if (mode === 'trees' && coords) {
+             const pos: [number, number] = [coords.lat, coords.lng];
+             const marker = L.marker(pos, { icon: blueIcon, draggable: true }).addTo(map);
+             marker.on('dragend', (e: any) => {
+                const { lat, lng } = e.target.getLatLng();
+                const latLng = { lat, lng };
+                setCoords(latLng);
+                onFindTrees(latLng);
+             });
+             markersRef.current.push(marker);
+             map.setView(pos, 8);
+        }
+    }, [results, mode, coords, t, onFindTrees, setCoords]);
+
     const handleLocationsSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!locationsInput.trim()) {
@@ -73,8 +138,21 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'is
         }
         onFindLocations(locationsInput);
     };
+    
+    const handleCoordsSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const lat = parseFloat(latInput);
+        const lng = parseFloat(lngInput);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            const newCoords = { lat, lng };
+            setCoords(newCoords);
+            onFindTrees(newCoords);
+        } else {
+            alert(t('siteSelector.validationErrorCoords'));
+        }
+    };
 
-    return (
+    const renderForm = () => (
         <div className="bg-slate-900/60 rounded-lg p-8 shadow-lg backdrop-blur-sm border border-slate-700">
             <div className="mb-6">
                 <div className="flex rounded-md shadow-sm bg-slate-700/80 p-1">
@@ -90,15 +168,9 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'is
                 <form onSubmit={handleLocationsSubmit} className="space-y-6">
                     <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-300">{t(`siteSelector.locations.label`)}</label>
-                        <textarea
-                            id="description"
-                            rows={8}
-                            value={locationsInput}
-                            onChange={(e) => setLocationsInput(e.target.value)}
+                        <textarea id="description" rows={8} value={locationsInput} onChange={(e) => setLocationsInput(e.target.value)}
                             className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
-                            placeholder={t(`siteSelector.locations.placeholder`)}
-                            disabled={isLoading}
-                        />
+                            placeholder={t(`siteSelector.locations.placeholder`)} disabled={isLoading} />
                     </div>
                     <div>
                         <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 via-purple-700 to-pink-700 hover:from-blue-700 hover:to-pink-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed transition-all">
@@ -108,15 +180,28 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'is
                 </form>
             ) : (
                  <div className="space-y-6">
+                    <form onSubmit={handleCoordsSubmit} className="space-y-4 p-4 bg-slate-800/50 rounded-md border border-slate-700">
+                        <h4 className="font-bold text-white text-md">{t('siteSelector.manualCoordsTitle')}</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="latitude-input" className="block text-xs font-medium text-gray-300">{t('siteSelector.latitude')}</label>
+                                <input type="number" id="latitude-input" step="any" value={latInput} onChange={(e) => setLatInput(e.target.value)}
+                                    className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
+                                    placeholder="e.g., 34.0522" />
+                            </div>
+                            <div>
+                                <label htmlFor="longitude-input" className="block text-xs font-medium text-gray-300">{t('siteSelector.longitude')}</label>
+                                <input type="number" id="longitude-input" step="any" value={lngInput} onChange={(e) => setLngInput(e.target.value)}
+                                    className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
+                                    placeholder="e.g., -118.2437" />
+                            </div>
+                        </div>
+                        <button type="submit" disabled={isLoading} className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
+                             {isLoading ? t('siteSelector.generating') : t('siteSelector.analyzeCoordsButton')}
+                        </button>
+                    </form>
                     <div className="text-center p-4 bg-slate-800/50 rounded-md border border-slate-700">
                         <p className="text-sm text-gray-400">{t('siteSelector.selectOnMap')}</p>
-                        {coords && (
-                            <div className="mt-3 text-left text-xs bg-slate-700 p-2 rounded-md">
-                                <h4 className="font-bold text-white text-sm mb-1">{t('siteSelector.selectedCoords')}</h4>
-                                <p><span className="font-semibold text-gray-300">{t('siteSelector.latitude')}:</span> {coords.lat.toFixed(6)}</p>
-                                <p><span className="font-semibold text-gray-300">{t('siteSelector.longitude')}:</span> {coords.lng.toFixed(6)}</p>
-                            </div>
-                        )}
                     </div>
                      { (isSuggestingGoals || suggestedGoals.length > 0) && (
                         <div className="pt-6 border-t border-slate-700/50 space-y-4 animate-fade-in">
@@ -129,12 +214,9 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'is
                             ) : (
                                 <div className="space-y-2">
                                     {suggestedGoals.map((goal, index) => (
-                                        <button 
-                                            key={index} 
-                                            onClick={() => onUseSuggestedGoal(goal)} 
+                                        <button key={index} onClick={() => onUseSuggestedGoal(goal)} 
                                             className="w-full text-left p-3 bg-slate-800 hover:bg-slate-700 rounded-md transition-colors text-sm text-gray-300"
-                                            title={t('siteSelector.suggestedGoals.useGoal')}
-                                        >
+                                            title={t('siteSelector.suggestedGoals.useGoal')}>
                                             <p>{goal}</p>
                                             <span className="block text-xs text-pink-400 mt-1 font-semibold">{t('siteSelector.suggestedGoals.useGoal')} &rarr;</span>
                                         </button>
@@ -147,190 +229,73 @@ const SiteSelectorForm: React.FC<Pick<SiteSelectorProps, 'onFindLocations' | 'is
             )}
         </div>
     );
-};
-
-const ResultsDisplay: React.FC<Pick<SiteSelectorProps, 'results' | 'isLoading' | 'error' | 'mode'>> = ({ results, isLoading, error, mode }) => {
-    const { t } = useLanguage();
-
-    const renderLocationCard = (item: PlantingSite, index: number) => (
-        <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
-            <h4 className="text-xl font-bold text-pink-400">{item.locationName}, <span className="text-lg font-medium text-gray-300">{item.country}</span></h4>
-            <div>
-                <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.rationale')}</h5>
-                <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
-            </div>
-            <div>
-                <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.species')}</h5>
-                <ul className="list-disc list-inside space-y-1">
-                    {item.suggestedSpecies.map(species => <li key={species} className="text-gray-300">{species}</li>)}
-                </ul>
-            </div>
-        </div>
-    );
-
-    const renderTreeCard = (item: SuitableTree, index: number) => (
-         <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
-            <h4 className="text-xl font-bold text-pink-400">{item.commonName} <span className="text-lg font-medium text-gray-400 italic">({item.scientificName})</span></h4>
-            <div>
-                <h5 className="font-semibold text-white mb-2">{t('siteSelector.treeResult.description')}</h5>
-                 <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.description) }} />
-            </div>
-            <div>
-                <h5 className="font-semibold text-white mb-2">{t('siteSelector.treeResult.rationale')}</h5>
-                 <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="bg-slate-900/60 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 min-h-[60vh] flex flex-col">
-            <div className="flex justify-between items-center p-4 bg-slate-800/80 border-b border-slate-700">
-                <h3 className="text-lg font-semibold text-white">{t('siteSelector.resultsTitle')}</h3>
-            </div>
-            <div className="p-6 flex-grow overflow-y-auto">
-                 {isLoading && (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
-                        <span className="ml-3 text-gray-400">{t('siteSelector.generating')}</span>
-                    </div>
-                )}
-                {error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{error}</div>}
-                {!isLoading && !error && results.length > 0 && (
-                    <div className="space-y-6">
-                        {results.map((item, index) => mode === 'locations' 
-                            ? renderLocationCard(item as PlantingSite, index)
-                            : renderTreeCard(item as SuitableTree, index)
-                        )}
-                    </div>
-                )}
-                {!isLoading && !error && results.length === 0 && (
-                    <div className="text-center text-gray-500 flex items-center justify-center h-full">
-                        <p>{t('siteSelector.placeholder')}</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-const mapStyles: google.maps.MapTypeStyle[] = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ];
-
-const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
-    const { t, language } = useLanguage();
-    const mapRef = useRef<HTMLDivElement>(null);
-    const [map, setMap] = useState<google.maps.Map | null>(null);
-    const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
-    const [isMapScriptLoaded, setIsMapScriptLoaded] = useState(!!(window.google && window.google.maps));
-
-    useEffect(() => {
-        if (isMapScriptLoaded) {
-            return;
-        }
-
-        const scriptId = 'google-maps-script';
-        if (document.getElementById(scriptId)) {
-            return;
-        }
-        
-        const script = document.createElement('script');
-        script.id = scriptId;
-        // IMPORTANT: Use process.env.API_KEY to load the script
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.API_KEY}&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        
-        const callbackName = 'initMapSiteSelector';
-        window[callbackName] = () => {
-            setIsMapScriptLoaded(true);
-            delete (window as any)[callbackName];
-        };
-        script.src += `&callback=${callbackName}`;
-
-        script.onerror = () => {
-            console.error("Google Maps script failed to load.");
-            delete (window as any)[callbackName];
-        };
-
-        document.head.appendChild(script);
-
-        return () => {
-            const scriptElement = document.getElementById(scriptId);
-            if (scriptElement) {
-                scriptElement.remove();
-            }
-        };
-    }, [isMapScriptLoaded]);
     
-    useEffect(() => {
-        if (mapRef.current && !map && isMapScriptLoaded) {
-            const newMap = new window.google.maps.Map(mapRef.current, {
-                center: { lat: 32, lng: 53 }, // Center of Iran
-                zoom: 5,
-                mapTypeControl: false,
-                streetViewControl: false,
-                styles: mapStyles
-            });
-            
-            newMap.addListener('click', (e: google.maps.MapMouseEvent) => {
-                if (props.mode === 'trees' && e.latLng) {
-                    const latLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                    props.setCoords(latLng);
-                    props.onFindTrees(latLng);
-                }
-            });
+    const renderResults = () => {
+        const renderLocationCard = (item: PlantingSite, index: number) => (
+            <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
+                <h4 className="text-xl font-bold text-pink-400">{item.locationName}, <span className="text-lg font-medium text-gray-300">{item.country}</span></h4>
+                <div>
+                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.rationale')}</h5>
+                    <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
+                </div>
+                <div>
+                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.species')}</h5>
+                    <ul className="list-disc list-inside space-y-1">
+                        {item.suggestedSpecies.map(species => <li key={species} className="text-gray-300">{species}</li>)}
+                    </ul>
+                </div>
+            </div>
+        );
 
-            setMap(newMap);
-        }
-    }, [mapRef, map, props.mode, props.setCoords, isMapScriptLoaded, props.onFindTrees]);
+        const renderTreeCard = (item: SuitableTree, index: number) => (
+             <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
+                <h4 className="text-xl font-bold text-pink-400">{item.commonName} <span className="text-lg font-medium text-gray-400 italic">({item.scientificName})</span></h4>
+                <div>
+                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.treeResult.description')}</h5>
+                     <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.description) }} />
+                </div>
+                <div>
+                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.treeResult.rationale')}</h5>
+                     <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
+                </div>
+            </div>
+        );
 
-    useEffect(() => {
-        if (!map) return;
-        // Clear previous markers
-        markers.forEach(marker => marker.setMap(null));
-        const newMarkers: google.maps.Marker[] = [];
+        return (
+            <div className="bg-slate-900/60 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 min-h-[60vh] flex flex-col">
+                <div className="flex justify-between items-center p-4 bg-slate-800/80 border-b border-slate-700">
+                    <h3 className="text-lg font-semibold text-white">{t('siteSelector.resultsTitle')}</h3>
+                </div>
+                <div className="p-6 flex-grow overflow-y-auto">
+                     {isLoading && (
+                        <div className="flex items-center justify-center h-full">
+                            <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
+                            <span className="ml-3 text-gray-400">{t('siteSelector.generating')}</span>
+                        </div>
+                    )}
+                    {error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{error}</div>}
+                    {!isLoading && !error && results.length > 0 && (
+                        <div className="space-y-6">
+                            {results.map((item, index) => mode === 'locations' 
+                                ? renderLocationCard(item as PlantingSite, index)
+                                : renderTreeCard(item as SuitableTree, index)
+                            )}
+                        </div>
+                    )}
+                    {!isLoading && !error && results.length === 0 && (
+                        <div className="text-center text-gray-500 flex items-center justify-center h-full">
+                            <p>{t('siteSelector.placeholder')}</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
-        if (props.mode === 'locations' && props.results.length > 0) {
-            const bounds = new google.maps.LatLngBounds();
-            props.results.forEach(result => {
-                const site = result as PlantingSite;
-                if (typeof site.latitude === 'number' && typeof site.longitude === 'number') {
-                    const pos = { lat: site.latitude, lng: site.longitude };
-                    const marker = new google.maps.Marker({ position: pos, map: map, title: site.locationName });
-                    
-                    const infoWindow = new google.maps.InfoWindow({
-                       content: `<div class="bg-slate-800 text-white p-2"><h4 class="font-bold">${site.locationName}</h4><p class="text-sm">${site.country}</p></div>`,
-                    });
-                    marker.addListener('click', () => infoWindow.open(map, marker));
-
-                    newMarkers.push(marker);
-                    bounds.extend(pos);
-                }
-            });
-            if (newMarkers.length > 0) {
-                map.fitBounds(bounds);
-            }
-        } else if (props.mode === 'trees' && props.coords) {
-             const marker = new google.maps.Marker({
-                position: props.coords,
-                map: map,
-                title: t('siteSelector.selectedCoords'),
-                draggable: true,
-             });
-             marker.addListener('dragend', (e: google.maps.MapMouseEvent) => {
-                 if (e.latLng) {
-                    const latLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                    props.setCoords(latLng);
-                 }
-             });
-             newMarkers.push(marker);
-             map.panTo(props.coords);
-             map.setZoom(8);
-        }
-        
-        setMarkers(newMarkers);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [map, props.results, props.mode, props.coords, t]);
-
+    const legendItems = [
+        { label: t('mapLegend.plantingSite'), color: 'bg-pink-500' },
+        { label: t('mapLegend.selectedPoint'), color: 'bg-blue-500' },
+    ];
 
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -341,14 +306,16 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">{t('siteSelector.subtitle')}</p>
             </div>
             
-            <div ref={mapRef} className="mt-8 h-96 w-full rounded-lg bg-slate-800 border border-slate-700 shadow-lg" />
-
-            <div className="mt-12 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div className="mt-12 max-w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
                 <div className="lg:sticky top-28">
-                    <SiteSelectorForm {...props} />
+                    <div className="relative">
+                        <div ref={mapRef} className="h-[75vh] w-full rounded-lg bg-slate-800 border border-slate-700 shadow-lg" />
+                        <MapLegend items={legendItems} />
+                    </div>
                 </div>
-                <div>
-                    <ResultsDisplay {...props} />
+                <div className="space-y-12">
+                    {renderForm()}
+                    {renderResults()}
                 </div>
             </div>
         </div>

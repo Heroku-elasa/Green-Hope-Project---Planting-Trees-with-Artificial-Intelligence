@@ -192,11 +192,13 @@ const translations: Record<string, any> = {
         generating: "Analyzing...",
         placeholder: "Your recommendations will appear here.",
         validationError: "Please describe your requirements to get a recommendation.",
-        validationErrorCoords: "Please select a location on the map first.",
+        validationErrorCoords: "Please provide valid coordinates.",
         selectOnMap: "To begin, click on the map to select an area for analysis.",
         selectedCoords: "Selected Location",
         latitude: "Latitude",
         longitude: "Longitude",
+        manualCoordsTitle: "Or enter coordinates manually",
+        analyzeCoordsButton: "Analyze Coordinates",
         locationResult: {
             rationale: "Rationale",
             species: "Suggested Species"
@@ -210,6 +212,11 @@ const translations: Record<string, any> = {
             loading: "Generating ideas...",
             useGoal: "Use this goal & find sites"
         }
+    },
+    mapLegend: {
+        title: "Map Legend",
+        plantingSite: "Planting Site Recommendation",
+        selectedPoint: "Selected Analysis Point"
     },
     videoGenerator: {
         title: "AI Video Generator",
@@ -499,11 +506,13 @@ const translations: Record<string, any> = {
         generating: "در حال تحلیل...",
         placeholder: "توصیه‌های شما در اینجا نمایش داده خواهد شد.",
         validationError: "لطفاً برای دریافت توصیه، نیازمندی‌های خود را توصیف کنید.",
-        validationErrorCoords: "لطفا ابتدا یک مکان را روی نقشه انتخاب کنید.",
+        validationErrorCoords: "لطفا مختصات معتبری را وارد کنید.",
         selectOnMap: "برای شروع، روی نقشه کلیک کنید یا یک منطقه را برای تحلیل انتخاب نمایید.",
         selectedCoords: "مکان انتخاب شده",
         latitude: "عرض جغرافیایی",
         longitude: "طول جغرافیایی",
+        manualCoordsTitle: "یا مختصات را دستی وارد کنید",
+        analyzeCoordsButton: "تحلیل مختصات",
         locationResult: {
             rationale: "دلایل انتخاب",
             species: "گونه‌های پیشنهادی"
@@ -517,6 +526,11 @@ const translations: Record<string, any> = {
             loading: "در حال تولید ایده...",
             useGoal: "استفاده از این هدف و یافتن مکان‌ها"
         }
+    },
+    mapLegend: {
+        title: "راهنمای نقشه",
+        plantingSite: "مکان پیشنهادی کاشت",
+        selectedPoint: "نقطه انتخابی تحلیل"
     },
     videoGenerator: {
         title: "ویدیو ساز هوش مصنوعی",
