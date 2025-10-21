@@ -1,7 +1,11 @@
 import React from 'react';
 import { useLanguage } from '../types';
 
-const SiteFooter: React.FC = () => {
+interface SiteFooterProps {
+    onAdminClick: () => void;
+}
+
+const SiteFooter: React.FC<SiteFooterProps> = ({ onAdminClick }) => {
     const { t } = useLanguage();
 
     return (
@@ -13,6 +17,11 @@ const SiteFooter: React.FC = () => {
                         <span className="font-bold text-lg text-white">{t('header.title')}</span>
                     </div>
                      <p className="text-xs">{t('footer.copyright')}</p>
+                     <div className="mt-4">
+                        <button onClick={onAdminClick} className="text-xs text-slate-500 hover:text-emerald-400 transition-colors">
+                           {t('footer.adminLink')}
+                        </button>
+                    </div>
                 </div>
             </div>
         </footer>

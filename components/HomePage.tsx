@@ -8,7 +8,7 @@ import StartupShowcase from './StartupShowcase';
 
 declare const L: any; // Declare Leaflet global
 
-type LoadingState = 'full-analysis' | 'campaign' | 'areas' | false;
+type LoadingState = 'full-analysis' | 'campaign' | 'areas' | 'today-suggestion' | false;
 type Severity = 'Low' | 'Medium' | 'High';
 type ActiveView = 'reforestation' | 'homeGardening' | 'startupShowcase';
 
@@ -16,6 +16,7 @@ interface GreenHopePageProps {
     onLocationSelect: (location: { lat: number, lng: number }) => void;
     selectedLocation: { lat: number, lng: number } | null;
     onFullAnalysis: () => void;
+    onTodaysSuggestion: () => void;
     onGenerateCampaign: () => void;
     plantingSuggestion: PlantingSuggestion | null;
     vegetationAnalysis: VegetationAnalysis | null;
@@ -30,6 +31,31 @@ interface GreenHopePageProps {
 }
 
 // --- Reusable UI Components ---
+const Clock: React.FC = () => {
+    const { language, t } = useLanguage();
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+        const timerId = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timerId);
+    }, []);
+
+    const locale = language === 'fa' ? 'fa-IR-u-nu-latn' : language;
+    
+    return (
+        <div className="bg-slate-950/50 p-3 rounded-lg mb-4 text-center border border-slate-800">
+            <p className="text-xs text-slate-400 mb-1">{t('main.currentTime')}</p>
+            <p className="font-mono text-emerald-300 text-sm sm:text-base">
+                {time.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+             <p className="font-mono text-emerald-300 text-sm sm:text-base">
+                {time.toLocaleTimeString(locale)}
+            </p>
+        </div>
+    );
+};
+
+
 const GroundingReferences: React.FC<{ chunks: GroundingChunk[] | undefined, t: (key: string) => string }> = ({ chunks, t }) => {
     if (!chunks || chunks.length === 0) return null;
     
@@ -295,6 +321,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     const [map, setMap] = useState<any>(null);
     const [marker, setMarker] = useState<any>(null);
     const [areaMarkers, setAreaMarkers] = useState<any[]>([]);
+    const [riskClusterGroup, setRiskClusterGroup] = useState<any>(null);
     const [activeMapType, setActiveMapType] = useState<string>('satellite');
     const [tileLayer, setTileLayer] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -344,6 +371,10 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                     { attribution: mapTiles.satellite.attribution }
                 ).addTo(newMap);
                 setTileLayer(initialTileLayer);
+                
+                const newClusterGroup = L.markerClusterGroup();
+                newMap.addLayer(newClusterGroup);
+                setRiskClusterGroup(newClusterGroup);
 
                 newMap.on('click', (e: any) => {
                     if (isSelectingArea) return;
@@ -381,6 +412,48 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
          setSuggestedAreas([]);
          setSuggestedAreasGrounding(undefined);
     }, [areaMarkers]);
+
+    const clearRiskMarkers = useCallback(() => {
+        if (riskClusterGroup) {
+            riskClusterGroup.clearLayers();
+        }
+    }, [riskClusterGroup]);
+
+    useEffect(() => {
+        clearRiskMarkers();
+
+        if (map && props.riskAnalysis?.risks && riskClusterGroup) {
+            props.riskAnalysis.risks.forEach(risk => {
+                if (risk.location) {
+                    const colorMap: Record<Severity, string> = {
+                        High: '#ef4444', // red-500
+                        Medium: '#eab308', // yellow-500
+                        Low: '#22c55e', // green-500
+                    };
+                    const color = colorMap[risk.severity] || '#94a3b8'; // slate-400
+
+                    const icon = L.divIcon({
+                        html: `<div class="w-5 h-5 rounded-full border-2 border-white shadow-md flex items-center justify-center" style="background-color: ${color};"><i class="fa-solid fa-triangle-exclamation text-white text-[10px]"></i></div>`,
+                        className: '',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10],
+                    });
+
+                    const riskMarker = L.marker(risk.location, { icon });
+
+                    const severityClass = getSeverityBadgeClasses(risk.severity);
+                    const popupContent = `
+                        <div class="text-slate-300 font-sans p-1 max-w-xs">
+                            <h4 class="font-bold mt-0 mb-1 text-white flex items-center gap-2"><span class="${severityClass}">${risk.severity}</span> ${risk.name}</h4>
+                            <p class="m-0 text-xs">${risk.explanation}</p>
+                        </div>
+                    `;
+                    riskMarker.bindPopup(popupContent);
+                    riskClusterGroup.addLayer(riskMarker);
+                }
+            });
+        }
+    }, [props.riskAnalysis, map, clearRiskMarkers, riskClusterGroup]);
 
     useEffect(() => {
         if (map && suggestedAreas.length > 0) {
@@ -644,6 +717,7 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                     <div className="animate-fade-in">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div className="lg:col-span-1 bg-slate-900 p-6 rounded-lg border border-slate-800 h-min">
+                                <Clock />
                                 <p className="text-slate-300 text-center mb-4 text-sm">{t('main.instructions')}</p>
                                 <form onSubmit={handleSearch} className="mb-4">
                                     <label htmlFor="location-search" className="sr-only">{t('main.searchPlaceholder')}</label>
@@ -678,7 +752,10 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                                 </div>
                                 <div className="space-y-4 pt-4 mt-4 border-t border-slate-700">
                                     <h3 className="font-bold text-center text-lg">{t('main.selectedLocation')}</h3>
-                                    <button onClick={props.onFullAnalysis} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'full-analysis' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-wand-magic-sparkles"></i><span>{t('main.analyzeLocation')}</span></>)}</button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      <button onClick={props.onTodaysSuggestion} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'today-suggestion' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-calendar-day"></i><span>{t('main.suggestForToday')}</span></>)}</button>
+                                      <button onClick={props.onFullAnalysis} disabled={!props.selectedLocation || !!props.isLoading} className="w-full py-3 px-4 bg-emerald-600 text-white font-semibold rounded-md hover:bg-emerald-700 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse">{props.isLoading === 'full-analysis' ? (<><div className="w-5 h-5 border-2 border-dashed rounded-full animate-spin border-white"></div><span>{t('loading')}</span></>) : (<><i className="fa-solid fa-wand-magic-sparkles"></i><span>{t('main.analyzeLocation')}</span></>)}</button>
+                                    </div>
                                 </div>
                             </div>
                             <div className="lg:col-span-2 h-96 lg:h-[650px] bg-slate-900 rounded-lg border border-slate-800 shadow-lg flex items-center justify-center p-4 relative overflow-hidden">
@@ -695,7 +772,14 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                         {props.selectedLocation && (
                             <section className="mt-8 space-y-8">
                                 {props.error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{props.error}</div>}
-                                <InfoCard title={t('results.suggestionTitle')} icon="fa-solid fa-tree" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<PlantingSuggestionSkeleton />}><PlantingSuggestionDisplay {...props} /></InfoCard>
+                                <InfoCard 
+                                    title={t('results.suggestionTitle')} 
+                                    icon="fa-solid fa-tree" 
+                                    isLoading={props.isLoading === 'full-analysis' || props.isLoading === 'today-suggestion'}
+                                    loadingSkeleton={<PlantingSuggestionSkeleton />}
+                                >
+                                    <PlantingSuggestionDisplay {...props} />
+                                </InfoCard>
                                 {(props.isLoading === 'campaign' || props.crowdfundingCampaign) && (<InfoCard title={t('campaign.title')} icon="fa-solid fa-hand-holding-dollar" isLoading={props.isLoading === 'campaign'}><CampaignDisplay {...props} /></InfoCard>)}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <InfoCard title={t('results.vegetationTitle')} icon="fa-solid fa-seedling" isLoading={props.isLoading === 'full-analysis'} loadingSkeleton={<VegetationAnalysisSkeleton />} tooltipText={t('results.vegetationTooltip')}><VegetationAnalysisDisplay {...props} /></InfoCard>

@@ -85,6 +85,33 @@ IMPORTANT: Your entire response must be a single, valid JSON object, without any
     return result;
 };
 
+export const getTodaysPlantingSuggestion = async (location: { lat: number; lng: number }, language: Language): Promise<PlantingSuggestion> => {
+    const currency = getCurrencyInfo(language);
+    const today = new Date().toLocaleDateString(language === 'fa' ? 'fa-IR-u-nu-latn' : language, { year: 'numeric', month: 'long', day: 'numeric' });
+    const prompt = `For the geographic location with latitude ${location.lat} and longitude ${location.lng}, and considering today's date is ${today}, suggest 3 native tree species ideal for planting RIGHT NOW.
+If today is NOT a good day, your summary must clearly explain why (e.g., wrong season, too hot) and suggest the next best time to plant. Otherwise, the summary should confirm it's a good time.
+Use Google Search for up-to-date, local information. For each species, provide:
+1. Reason for suitability (climate, soil, biodiversity).
+2. Estimated cost per sapling in ${currency.name} (${currency.code}) (a numerical min/max range). ${currency.context}
+3. Best time/season for planting (confirming if now is appropriate).
+4. Initial watering needs.
+5. Duration of protection needed for saplings.
+The response must be in ${language}.
+IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+             tools: [{googleSearch: {}}],
+        },
+    });
+    
+    const result: PlantingSuggestion = parseJsonResponse(response.text);
+    result.grounding = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    return result;
+};
+
 export const getVegetationAnalysis = async (location: { lat: number; lng: number }, language: Language): Promise<VegetationAnalysis> => {
     const prompt = `Analyze the current vegetation cover for the area around latitude ${location.lat} and longitude ${location.lng}. Use Google Search to get recent, relevant data. Provide the percentage of vegetation cover, the level of reforestation need (Low, Medium, High), and a brief analysis. The response must be in ${language}.
 IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
@@ -103,8 +130,13 @@ IMPORTANT: Your entire response must be a single, valid JSON object, without any
 };
 
 export const getRiskAnalysis = async (location: { lat: number; lng: number }, numberOfTrees: number, language: Language): Promise<RiskAnalysis> => {
-    const prompt = `For a project to plant ${numberOfTrees} trees at latitude ${location.lat} and longitude ${location.lng}, analyze the potential risks. Use Google Search to find information on local environmental laws, climate change impacts (drought, wildfires), and ecological risks. Provide a list of risks with severity (Low, Medium, High) and an explanation, and calculate an overall risk score between 0 and 100. The response must be in ${language}.
-IMPORTANT: Your entire response must be a single, valid JSON object, without any markdown formatting or other text.`;
+    const prompt = `For a project to plant ${numberOfTrees} trees at latitude ${location.lat} and longitude ${location.lng}, analyze potential risks. Use Google Search for local environmental laws, climate impacts (drought, wildfires), and ecological risks. Provide a list of risks. For each risk, include:
+1. 'name' (string).
+2. 'severity' ('Low', 'Medium', or 'High').
+3. 'explanation' (string).
+4. 'location' (an object with 'lat' and 'lng') IF the risk is tied to a specific point (e.g., a factory for pollution). This is optional.
+Also, calculate an 'overallRiskScore' from 0 to 100. Respond in ${language}.
+IMPORTANT: The entire response must be a single, valid JSON object without markdown.`;
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,

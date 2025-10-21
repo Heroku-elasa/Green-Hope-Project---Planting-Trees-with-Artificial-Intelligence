@@ -4,10 +4,12 @@ import GreenHopePage from './components/HomePage';
 import QuotaErrorModal from './components/QuotaErrorModal';
 import { useLanguage, PlantingSuggestion, VegetationAnalysis, RiskAnalysis, CrowdfundingCampaign } from './types';
 import { useToast } from './components/Toast';
-import { getPlantingSuggestion, getVegetationAnalysis, getRiskAnalysis, generateCrowdfundingCampaign } from './services/geminiService';
+import { getPlantingSuggestion, getVegetationAnalysis, getRiskAnalysis, generateCrowdfundingCampaign, getTodaysPlantingSuggestion } from './services/geminiService';
 import SiteFooter from './components/Footer';
+import AdminPage from './components/AdminPage';
 
-type LoadingState = 'full-analysis' | 'campaign' | 'areas' | false;
+type LoadingState = 'full-analysis' | 'campaign' | 'areas' | 'today-suggestion' | false;
+type View = 'main' | 'admin';
 
 const App: React.FC = () => {
   const [isQuotaExhausted, setIsQuotaExhausted] = useState(false);
@@ -23,6 +25,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [numberOfTrees, setNumberOfTrees] = useState(100);
   const [reforestationGoal, setReforestationGoal] = useState(10000);
+  const [currentView, setCurrentView] = useState<View>('main');
   
 
   const handleApiError = useCallback((error: unknown) => {
@@ -47,6 +50,7 @@ const App: React.FC = () => {
       setRiskAnalysis(null);
       setCrowdfundingCampaign(null);
       setError(null);
+      setCurrentView('main');
   }, []);
 
   const handleFullAnalysis = useCallback(async () => {
@@ -72,6 +76,23 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [selectedLocation, language, handleApiError, numberOfTrees]);
+
+  const handleTodaysSuggestion = useCallback(async () => {
+    if (!selectedLocation) return;
+    setIsLoading('today-suggestion');
+    setError(null);
+    setPlantingSuggestion(null);
+    setCrowdfundingCampaign(null);
+    
+    try {
+      const suggestion = await getTodaysPlantingSuggestion(selectedLocation, language);
+      setPlantingSuggestion(suggestion);
+    } catch (err) {
+      handleApiError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedLocation, language, handleApiError]);
 
 
   const handleGenerateCampaign = useCallback(async () => {
@@ -103,24 +124,29 @@ const App: React.FC = () => {
       <div className="text-white font-sans">
         <SiteHeader onLogoClick={resetState} />
         <main>
-            <GreenHopePage
-                onLocationSelect={handleLocationSelect}
-                selectedLocation={selectedLocation}
-                onFullAnalysis={handleFullAnalysis}
-                onGenerateCampaign={handleGenerateCampaign}
-                plantingSuggestion={plantingSuggestion}
-                vegetationAnalysis={vegetationAnalysis}
-                riskAnalysis={riskAnalysis}
-                crowdfundingCampaign={crowdfundingCampaign}
-                isLoading={isLoading}
-                error={error}
-                numberOfTrees={numberOfTrees}
-                onNumberOfTreesChange={setNumberOfTrees}
-                reforestationGoal={reforestationGoal}
-                onReforestationGoalChange={setReforestationGoal}
-            />
+          {currentView === 'main' ? (
+              <GreenHopePage
+                  onLocationSelect={handleLocationSelect}
+                  selectedLocation={selectedLocation}
+                  onFullAnalysis={handleFullAnalysis}
+                  onTodaysSuggestion={handleTodaysSuggestion}
+                  onGenerateCampaign={handleGenerateCampaign}
+                  plantingSuggestion={plantingSuggestion}
+                  vegetationAnalysis={vegetationAnalysis}
+                  riskAnalysis={riskAnalysis}
+                  crowdfundingCampaign={crowdfundingCampaign}
+                  isLoading={isLoading}
+                  error={error}
+                  numberOfTrees={numberOfTrees}
+                  onNumberOfTreesChange={setNumberOfTrees}
+                  reforestationGoal={reforestationGoal}
+                  onReforestationGoalChange={setReforestationGoal}
+              />
+          ) : (
+             <AdminPage />
+          )}
         </main>
-        <SiteFooter />
+        <SiteFooter onAdminClick={() => setCurrentView('admin')} />
         <QuotaErrorModal isOpen={isQuotaExhausted} onClose={() => setIsQuotaExhausted(false)} />
       </div>
   );

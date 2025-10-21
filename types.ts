@@ -52,6 +52,10 @@ export interface RiskAnalysis {
         name:string;
         severity: 'Low' | 'Medium' | 'High';
         explanation: string;
+        location?: {
+            lat: number;
+            lng: number;
+        };
     }[];
     overallRiskScore: number;
     grounding?: GroundingChunk[];
@@ -97,6 +101,7 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'برای شروع، روی نقشه کلیک کنید یا مکانی را برای تحلیل جستجو نمایید.',
             selectedLocation: 'مکان انتخاب شده:',
             analyzeLocation: 'انجام تحلیل کامل',
+            suggestForToday: 'پیشنهاد کاشت برای امروز',
             loadingMap: 'در حال بارگذاری نقشه...',
             numberOfTreesLabel: 'تعداد درخت برای تحلیل',
             reforestationGoalLabel: 'هدف کلی جنگل‌کاری',
@@ -116,6 +121,7 @@ const translations: Record<Language, Record<string, any>> = {
             analyzeSelection: 'تحلیل منطقه انتخاب شده؟',
             analyze: 'تحلیل',
             locateMe: 'مکان‌یابی من',
+            currentTime: 'زمان فعلی',
         },
         results: {
             suggestionTitle: 'پیشنهاد کاشت درخت',
@@ -191,6 +197,15 @@ const translations: Record<Language, Record<string, any>> = {
         },
         footer: {
             copyright: '© ۲۰۲۴ پروژه امید سبز. تمام حقوق محفوظ است.',
+            adminLink: 'پنل مدیریت',
+        },
+        admin: {
+            title: 'پنل مدیریت',
+            featureManagement: 'مدیریت ویژگی‌ها',
+            googleDateFeature: 'ویژگی هوش مصنوعی Google Date',
+            googleDateDescription: 'هنگامی که فعال باشد، این ویژگی از داده‌های Google برای بهبود تحلیل‌های زمانی استفاده می‌کند.',
+            enabled: 'فعال',
+            disabled: 'غیرفعال',
         },
         loading: 'در حال تحلیل...',
         error: 'خطایی رخ داد. لطفاً دوباره تلاش کنید.',
@@ -249,6 +264,7 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'Click on the map or search for a location to begin analysis.',
             selectedLocation: 'Selected Location:',
             analyzeLocation: 'Perform Full Analysis',
+            suggestForToday: 'Suggest for Today',
             loadingMap: 'Loading Map...',
             numberOfTreesLabel: 'Number of Trees for Analysis',
             reforestationGoalLabel: 'Overall Reforestation Goal',
@@ -268,6 +284,7 @@ const translations: Record<Language, Record<string, any>> = {
             analyzeSelection: 'Analyze selected area?',
             analyze: 'Analyze',
             locateMe: 'Find My Location',
+            currentTime: 'Current Time',
         },
         results: {
             suggestionTitle: 'Tree Planting Suggestion',
@@ -343,6 +360,15 @@ const translations: Record<Language, Record<string, any>> = {
         },
         footer: {
             copyright: '© 2024 Green Hope Initiative. All rights reserved.',
+            adminLink: 'Admin Panel',
+        },
+        admin: {
+            title: 'Admin Panel',
+            featureManagement: 'Feature Management',
+            googleDateFeature: 'Google Date AI Feature',
+            googleDateDescription: 'When enabled, this feature utilizes Google date data to enhance temporal analyses.',
+            enabled: 'Enabled',
+            disabled: 'Disabled',
         },
         loading: 'Analyzing...',
         error: 'An error occurred. Please try again.',
@@ -401,6 +427,7 @@ const translations: Record<Language, Record<string, any>> = {
             instructions: 'انقر على الخريطة أو ابحث عن موقع لبدء التحليل.',
             selectedLocation: 'الموقع المحدد:',
             analyzeLocation: 'إجراء تحليل كامل',
+            suggestForToday: 'اقتراح زراعة لليوم',
             loadingMap: 'جاري تحميل الخريطة...',
             numberOfTreesLabel: 'عدد الأشجار للتحليل',
             reforestationGoalLabel: 'الهدف العام لإعادة التحريج',
@@ -420,6 +447,7 @@ const translations: Record<Language, Record<string, any>> = {
             analyzeSelection: 'تحليل المنطقة المحددة؟',
             analyze: 'تحليل',
             locateMe: 'تحديد موقعي',
+            currentTime: 'الوقت الحالي',
         },
         results: {
             suggestionTitle: 'اقتراح زراعة الأشجار',
@@ -495,6 +523,15 @@ const translations: Record<Language, Record<string, any>> = {
         },
         footer: {
             copyright: '© 2024 مبادرة الأمل الأخضر. جميع الحقوق محفوظة.',
+            adminLink: 'لوحة الإدارة',
+        },
+        admin: {
+            title: 'لوحة الإدارة',
+            featureManagement: 'إدارة الميزات',
+            googleDateFeature: 'ميزة الذكاء الاصطناعي لتاريخ Google',
+            googleDateDescription: 'عند التمكين، تستخدم هذه الميزة بيانات تاريخ Google لتحسين التحليلات الزمنية.',
+            enabled: 'ممكّن',
+            disabled: 'معطّل',
         },
         loading: 'جاري التحليل...',
         error: 'حدث خطأ. يرجى المحاولة مرة أخرى.',
