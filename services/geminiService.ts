@@ -1,7 +1,7 @@
 
 
 import { GoogleGenAI, Type, GenerateContentResponse, Content, Modality } from "@google/genai";
-import { Grant, GrantSummary, VideoScene, PlantingSite, SuitableTree } from "../types";
+import { Grant, GrantSummary, VideoScene, PlantingSite, SuitableTree, EconomicBenefitAnalysis, Coords } from "../types";
 
 // Always use new GoogleGenAI({apiKey: process.env.API_KEY});
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
@@ -224,6 +224,39 @@ export const findSuitableTrees = async (latitude: number, longitude: number): Pr
     const jsonStr = response.text.trim();
     return JSON.parse(jsonStr);
 };
+
+export const calculateEconomicBenefits = async (treeName: string, scientificName: string, coords: Coords): Promise<EconomicBenefitAnalysis> => {
+    const systemInstruction = `You are an agro-economist specializing in forestry and horticulture. Your task is to provide a realistic economic analysis for a specific tree species planted at a given location. Consider factors like climate, potential local markets, and typical growth rates.`;
+    const userPrompt = `
+        Provide an economic benefit analysis for planting the tree "${treeName}" (${scientificName}) at latitude ${coords.lat}, longitude ${coords.lng}.
+        I need the following information:
+        - annualRevenuePerTree: A realistic estimated range of annual income from the tree's products (e.g., fruit, nuts, timber, sap) once it reaches maturity.
+        - yearsToProfitability: An estimated range of years it takes for the tree to become profitable.
+        - primaryProducts: A list of the main commercial products from this tree.
+        - otherBenefits: A brief summary in Markdown of other potential economic benefits, such as carbon credits, soil improvement leading to better yields of other crops, or ecotourism.
+    `;
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: userPrompt,
+        config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    annualRevenuePerTree: { type: Type.STRING },
+                    yearsToProfitability: { type: Type.STRING },
+                    primaryProducts: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    otherBenefits: { type: Type.STRING, description: "A summary in Markdown." },
+                },
+                required: ["annualRevenuePerTree", "yearsToProfitability", "primaryProducts", "otherBenefits"]
+            }
+        }
+    });
+    const jsonStr = response.text.trim();
+    return JSON.parse(jsonStr);
+};
+
 
 export const suggestProjectGoals = async (latitude: number, longitude: number): Promise<string[]> => {
     const systemInstruction = `You are a conservation strategist. Based on the provided geographic coordinates, generate 3 concise and actionable project goals for a reforestation or environmental project. Focus on specific, realistic objectives relevant to the likely ecosystem of that location.`;

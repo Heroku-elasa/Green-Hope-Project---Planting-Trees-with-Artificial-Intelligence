@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import Header from './components/Header';
 import SiteFooter from './components/Footer';
@@ -29,6 +28,17 @@ const decodeJwt = (string: string): any => {
         return null;
     }
 };
+
+// Helper function to shuffle an array
+const shuffleArray = <T,>(array: T[]): T[] => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+};
+
 
 const App: React.FC = () => {
     const { t } = useLanguage();
@@ -277,6 +287,14 @@ const App: React.FC = () => {
         handleFindLocations(goal);
     };
 
+    const handleFindGrantsForTree = useCallback((query: string) => {
+        setGrantKeywords(query);
+        setPage('grant');
+        // Clear previous grant results to show loading state correctly
+        setFoundGrants([]);
+        handleFindGrants(query);
+    }, []);
+
     const handleGenerateScript = async () => {
         setIsScriptLoading(true);
         setError(null);
@@ -398,6 +416,15 @@ const App: React.FC = () => {
         return [initialMessage, ...historyMessages];
     }, [chatHistory, t]);
 
+    // Set initial suggested prompts for the chatbot
+    useEffect(() => {
+        if (chatHistory.length === 0) {
+            const allPrompts: string[] = t('chatbot.initialPrompts');
+            const randomPrompts = shuffleArray(allPrompts).slice(0, 3);
+            setSuggestedPrompts(randomPrompts);
+        }
+    }, [t, chatHistory.length]);
+
 
     const renderPage = () => {
         switch (page) {
@@ -410,7 +437,7 @@ const App: React.FC = () => {
                 <GrantFinder onFindGrants={handleFindGrants} isLoading={isLoading} error={error} grants={foundGrants} onAnalyzeGrant={handleAnalyzeGrant} keywords={grantKeywords} setKeywords={setGrantKeywords} />
                 {selectedGrant && <GrantAdopter grant={selectedGrant} isAnalyzing={isAnalyzingGrant} result={grantAnalysis} error={grantAnalysisError} onClear={() => setSelectedGrant(null)} onPrepareProposal={(grant) => { setPage('generator'); setReportTopic(`Funding Proposal for ${grant.grantTitle}`); setReportDescription(`Based on the grant summary: ${grant.summary}`); setReportType('funding_proposal'); }} />}
             </>);
-            case 'siteSelector': return <SiteSelector onFindLocations={handleFindLocations} onFindTrees={handleFindTrees} results={siteSelectorResults} isLoading={isLoading} error={error} mode={siteSelectorMode} setMode={setSiteSelectorMode} locationsInput={siteSelectorLocationsInput} setLocationsInput={setSiteSelectorLocationsInput} coords={siteSelectorCoords} setCoords={setSiteSelectorCoords} suggestedGoals={suggestedGoals} isSuggestingGoals={isSuggestingGoals} onUseSuggestedGoal={handleUseSuggestedGoal} />;
+            case 'siteSelector': return <SiteSelector onFindLocations={handleFindLocations} onFindTrees={handleFindTrees} results={siteSelectorResults} isLoading={isLoading} error={error} mode={siteSelectorMode} setMode={setSiteSelectorMode} locationsInput={siteSelectorLocationsInput} setLocationsInput={setSiteSelectorLocationsInput} coords={siteSelectorCoords} setCoords={setSiteSelectorCoords} suggestedGoals={suggestedGoals} isSuggestingGoals={isSuggestingGoals} onUseSuggestedGoal={handleUseSuggestedGoal} onFindGrantsForTree={handleFindGrantsForTree} />;
             case 'video': return <VideoGenerator prompt={videoPrompt} setPrompt={setVideoPrompt} negativePrompt={videoNegativePrompt} setNegativePrompt={setVideoNegativePrompt} image={videoImage} setImage={setVideoImage} scenes={videoScenes} onSceneChange={(index, desc) => { const newScenes = [...videoScenes]; newScenes[index].description = desc; setVideoScenes(newScenes); }} onApproveScene={(index, isApproved) => { const newScenes = [...videoScenes]; newScenes[index].isApproved = isApproved; setVideoScenes(newScenes); }} onConfirmScene={onConfirmScene} onGenerateScript={handleGenerateScript} isScriptLoading={isScriptLoading} onGenerateSceneVideo={handleGenerateSceneVideo} onGenerateSceneImage={handleGenerateSceneImage} error={error} onClear={() => { setVideoScenes([]); setVideoPrompt(''); setVideoImage(null); }} duration={videoDuration} setDuration={setVideoDuration} aspectRatio={videoAspectRatio} setAspectRatio={setVideoAspectRatio} numberOfVersions={videoVersions} setNumberOfVersions={setVideoVersions} withWatermark={videoWithWatermark} setWithWatermark={setVideoWithWatermark} isQuotaExhausted={isQuotaExhausted} handleApiError={handleApiError} musicPrompt={videoMusicPrompt} setMusicPrompt={setVideoMusicPrompt} musicDescription={videoMusicDescription} isMusicLoading={isMusicLoading} onGenerateMusic={onGenerateMusic} selectedMusicUrl={selectedMusicUrl} onSelectMusicUrl={setSelectedMusicUrl} videoType={videoType} setVideoType={setVideoType} />;
             case 'imageEditor': return <ImageEditor originalImage={originalImage} setOriginalImage={setOriginalImage} editedImage={editedImage} prompt={editPrompt} setPrompt={setEditPrompt} onGenerate={handleEditImage} isLoading={isEditingImage} error={error} onClear={() => { setOriginalImage(null); setEditedImage(null); setEditPrompt(''); setError(null); }} />;
             case 'blog': return <BlogGenerator />;

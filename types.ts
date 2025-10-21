@@ -181,7 +181,15 @@ const translations: Record<string, any> = {
         locations: {
             label: "Describe your project goals",
             placeholder: "e.g., A large-scale project in a semi-arid region of North Africa focused on combating desertification and supporting local agroforestry.",
-            button: "Find Locations"
+            button: "Find Locations",
+            examplePrompts: {
+                title: "Or, try an example:",
+                prompts: [
+                    "Reforest a coastal area in Southeast Asia to prevent erosion and restore mangrove habitats.",
+                    "Identify urban greening opportunities in major European cities to combat heat island effect.",
+                    "Find suitable locations for a biodiversity corridor connecting two national parks in Central America."
+                ]
+            }
         },
         trees: {
             label: "Describe the location and conditions",
@@ -205,13 +213,35 @@ const translations: Record<string, any> = {
         },
         treeResult: {
             description: "Description",
-            rationale: "Suitability Rationale"
+            rationale: "Suitability Rationale",
+            findGrantsButton: "Find Grants for Planting This Tree",
+            analyzeBenefitsButton: "Analyze Economic Benefits",
+            analyzingBenefits: "Analyzing...",
+            economicAnalysisTitle: "Economic Benefit Analysis",
+            annualRevenue: "Est. Annual Revenue (Per Tree)",
+            yearsToProfit: "Years to Profitability",
+            primaryProducts: "Primary Products",
+            otherBenefits: "Other Economic Benefits"
         },
         suggestedGoals: {
             title: "Suggested Project Goals",
             loading: "Generating ideas...",
             useGoal: "Use this goal & find sites"
-        }
+        },
+        findMyLocation: "Find My Location",
+        findingLocation: "Finding your location...",
+        locationError: "Could not get your location. Please ensure location services are enabled in your browser and try again.",
+        drawPrompt: "Find planting sites within the area defined by the coordinates [{swLat}, {swLng}] to [{neLat}, {neLng}].",
+        drawPolygonPrompt: "Find planting sites within the polygon defined by these vertices: {vertices}.",
+        drawArea: "Draw an area to search",
+        confirmPopup: {
+            title: "Confirm Location",
+            coordinates: "Coordinates: {lat}, {lng}",
+            button: "Find Trees Here"
+        },
+        latLabelShort: "Lat",
+        lngLabelShort: "Lng",
+        mapLoading: "Loading map...",
     },
     mapLegend: {
         title: "Map Legend",
@@ -312,7 +342,16 @@ const translations: Record<string, any> = {
         title: "Green Hope Assistant",
         placeholder: "Ask about our projects...",
         initialGreeting: "Hello! How can I help you learn about our reforestation projects? You can ask me about our technology, our mission, or where we plant.",
-        send: "Send"
+        send: "Send",
+        initialPrompts: [
+            "What is the Green Hope Project?",
+            "How do you use AI for planting trees?",
+            "Tell me about your latest project.",
+            "What services do you offer?",
+            "Explain your site selection process.",
+            "How can I get involved?",
+            "Who are your partners?"
+        ]
     }
   },
   fa: {
@@ -495,7 +534,15 @@ const translations: Record<string, any> = {
         locations: {
             label: "اهداف پروژه خود را توصیف کنید",
             placeholder: "مثال: یک پروژه بزرگ در منطقه‌ای نیمه‌خشک در شمال آفریقا با تمرکز بر مبارزه با بیابان‌زایی و حمایت از جنگل‌داری زراعی محلی.",
-            button: "یافتن مناطق"
+            button: "یافتن مناطق",
+            examplePrompts: {
+                title: "یا، یک مثال را امتحان کنید:",
+                prompts: [
+                    "جنگل‌کاری مجدد یک منطقه ساحلی در جنوب شرقی آسیا برای جلوگیری از فرسایش و احیای زیستگاه‌های مانگرو.",
+                    "شناسایی فرصت‌های فضای سبز شهری در شهرهای بزرگ اروپایی برای مبارزه با اثر جزیره گرمایی.",
+                    "یافتن مکان‌های مناسب برای یک کریدور تنوع زیستی که دو پارک ملی را در آمریکای مرکزی به هم متصل می‌کند."
+                ]
+            }
         },
         trees: {
             label: "مکان و شرایط را توصیف کنید",
@@ -519,13 +566,35 @@ const translations: Record<string, any> = {
         },
         treeResult: {
             description: "توضیحات",
-            rationale: "دلایل مناسب بودن"
+            rationale: "دلایل مناسب بودن",
+            findGrantsButton: "یافتن گرنت برای کاشت این درخت",
+            analyzeBenefitsButton: "تحلیل مزایای اقتصادی",
+            analyzingBenefits: "در حال تحلیل...",
+            economicAnalysisTitle: "تحلیل مزایای اقتصادی",
+            annualRevenue: "درآمد سالانه تخمینی (به ازای هر درخت)",
+            yearsToProfit: "سال تا سوددهی",
+            primaryProducts: "محصولات اصلی",
+            otherBenefits: "سایر مزایای اقتصادی"
         },
         suggestedGoals: {
             title: "اهداف پیشنهادی پروژه",
             loading: "در حال تولید ایده...",
             useGoal: "استفاده از این هدف و یافتن مکان‌ها"
-        }
+        },
+        findMyLocation: "مکان‌یابی من",
+        findingLocation: "در حال یافتن موقعیت شما...",
+        locationError: "موقعیت شما یافت نشد. لطفاً خدمات موقعیت مکانی را در مرورگر خود فعال کرده و دوباره امتحان کنید.",
+        drawPrompt: "یافتن مناطق کاشت در محدوده مشخص شده با مختصات [{swLat}, {swLng}] تا [{neLat}, {neLng}].",
+        drawPolygonPrompt: "یافتن مناطق کاشت در محدوده چندضلعی با رئوس زیر: {vertices}.",
+        drawArea: "برای جستجو یک منطقه رسم کنید",
+        confirmPopup: {
+            title: "تایید مکان",
+            coordinates: "مختصات: {lat}, {lng}",
+            button: "یافتن درختان در اینجا"
+        },
+        latLabelShort: "عرض",
+        lngLabelShort: "طول",
+        mapLoading: "در حال بارگذاری نقشه...",
     },
     mapLegend: {
         title: "راهنمای نقشه",
@@ -626,7 +695,16 @@ const translations: Record<string, any> = {
         title: "دستیار امید سبز",
         placeholder: "درباره پروژه‌های ما بپرسید...",
         initialGreeting: "سلام! چگونه می‌توانم به شما در مورد پروژه‌های درخت‌کاری ما کمک کنم؟ می‌توانید درباره فناوری، مأموریت ما یا مکان‌های کاشت ما سؤال کنید.",
-        send: "ارسال"
+        send: "ارسال",
+        initialPrompts: [
+            "پروژه امید سبز چیست؟",
+            "چگونه از هوش مصنوعی برای کاشت درخت استفاده می‌کنید؟",
+            "درباره آخرین پروژه خود به من بگویید.",
+            "چه خدماتی ارائه می‌دهید؟",
+            "فرآیند انتخاب سایت خود را توضیح دهید.",
+            "چگونه می‌توانم مشارکت کنم؟",
+            "شرکای شما چه کسانی هستند؟"
+        ]
     }
   }
 };
@@ -734,6 +812,13 @@ export interface SuitableTree {
     scientificName: string;
     description: string;
     rationale: string;
+}
+
+export interface EconomicBenefitAnalysis {
+    annualRevenuePerTree: string;
+    yearsToProfitability: string;
+    primaryProducts: string[];
+    otherBenefits: string;
 }
 
 // --- Video Generator Types ---
