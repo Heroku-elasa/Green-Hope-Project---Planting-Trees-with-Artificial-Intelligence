@@ -1,8 +1,8 @@
 import React from 'react';
 
 // This component is no longer in use.
-const AnalysisDisplay: React.FC = () => {
+const SpecialistFinder: React.FC = () => {
   return null;
 };
 
-export default AnalysisDisplay;
+export default SpecialistFinder;

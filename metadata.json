@@ -1,6 +1,6 @@
 {
-  "name": "۱Green Hope Project - Planting Trees with Artificial Intelligence",
-  "description": "An application for the Green Hope Project, using AI to plan reforestation efforts, find grants, and generate reports for a greener planet.",
+  "name": "Copy of  پروژه امید سبز | کاشت درخت با هوش مصنوعی",
+  "description": "با استفاده از هوش مصنوعی، بهترین مکان‌ها را برای کاشت درخت شناسایی کنید، تحلیل‌های زیست‌محیطی دریافت کنید و برای پروژه‌های خود سرمایه جمع‌آوری کنید.",
   "requestFramePermissions": [
     "geolocation"
   ]
