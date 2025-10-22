@@ -14,7 +14,7 @@ const MapLegend: React.FC<MapLegendProps> = ({ items }) => {
     const { t } = useLanguage();
 
     return (
-        <div className="absolute bottom-4 start-4 z-10 bg-slate-900/70 backdrop-blur-sm rounded-lg p-3 border border-white/20 shadow-lg animate-fade-in">
+        <div className="absolute bottom-4 start-4 z-[1000] bg-slate-900/70 backdrop-blur-sm rounded-lg p-3 border border-white/20 shadow-lg animate-fade-in">
             <h4 className="font-bold text-sm text-white mb-2">{t('mapLegend.title')}</h4>
             <div className="space-y-1">
                 {items.map(item => (

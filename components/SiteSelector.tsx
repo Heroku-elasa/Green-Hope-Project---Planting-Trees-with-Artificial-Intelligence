@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useLanguage, PlantingSite, SuitableTree, Coords, EconomicBenefitAnalysis } from '../types';
+import { useLanguage, PlantingSite, SuitableTree, Coords, EconomicBenefitAnalysis, GroundedResult, SiteAnalysis, SiteEconomicAnalysis } from '../types';
 import * as geminiService from '../services/geminiService';
 import { marked } from 'marked';
 import MapLegend from './MapLegend';
@@ -26,7 +26,89 @@ interface SiteSelectorProps {
     isSuggestingGoals: boolean;
     onUseSuggestedGoal: (goal: string) => void;
     onFindGrantsForTree: (query: string) => void;
+    handleApiError: (err: unknown) => string;
 }
+
+const SiteAnalysisModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  site: PlantingSite | null;
+  analysis: SiteAnalysis | null;
+  isLoading: boolean;
+  error: string | null;
+}> = ({ isOpen, onClose, site, analysis, isLoading, error }) => {
+  const { t } = useLanguage();
+
+  if (!isOpen || !site) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[1002] animate-fade-in" aria-modal="true" role="dialog">
+      <div className="bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 border border-pink-500/50 max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center border-b border-slate-700 pb-3 mb-4">
+           <h3 className="text-lg font-semibold leading-6 text-white">{t('siteAnalysisModal.title')}: <span className="text-pink-400">{site.locationName}</span></h3>
+           <button onClick={onClose} className="p-1 text-gray-400 hover:text-white transition-colors" aria-label={t('siteAnalysisModal.close')}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+           </button>
+        </div>
+        <div className="overflow-y-auto pr-2 flex-grow">
+          {isLoading && (
+            <div className="text-center py-10">
+              <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400 mx-auto mb-4"></div>
+              <h4 className="text-lg font-semibold text-white">{t('siteAnalysisModal.analyzing')}</h4>
+            </div>
+          )}
+          {error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{t('siteAnalysisModal.error')} {error}</div>}
+          {analysis && !isLoading && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div className="bg-slate-900/50 p-3 rounded-lg">
+                      <div className="text-xs text-gray-400">{t('siteAnalysisModal.estimatedCost')}</div>
+                      <div className="text-xl font-bold text-pink-400">{analysis.estimatedCost}</div>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-lg">
+                      <div className="text-xs text-gray-400">{t('siteAnalysisModal.treeCount')}</div>
+                      <div className="text-xl font-bold text-pink-400">{analysis.treeCount.toLocaleString()}</div>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-lg">
+                      <div className="text-xs text-gray-400">{t('siteAnalysisModal.duration')}</div>
+                      <div className="text-xl font-bold text-pink-400">{analysis.projectDurationYears}</div>
+                  </div>
+                  <div className="bg-slate-900/50 p-3 rounded-lg">
+                      <div className="text-xs text-gray-400">{t('siteAnalysisModal.carbonSeq')}</div>
+                      <div className="text-xl font-bold text-pink-400">{analysis.carbonSequestrationTonnesPerYear.toLocaleString()} <span className="text-sm font-normal text-gray-400">{t('siteAnalysisModal.tonnesPerYear')}</span></div>
+                  </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-white mb-2">{t('siteAnalysisModal.keyChallenges')}</h4>
+                  <ul className="list-disc list-inside space-y-2 text-sm text-gray-300">
+                    {analysis.keyChallenges.map((item, index) => <li key={index}>{item}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white mb-2">{t('siteAnalysisModal.successFactors')}</h4>
+                  <ul className="list-disc list-inside space-y-2 text-sm text-gray-300">
+                    {analysis.successFactors.map((item, index) => <li key={index}>{item}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="mt-5 sm:mt-6 pt-4 border-t border-slate-700 text-right">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex justify-center rounded-md border border-slate-600 shadow-sm px-4 py-2 bg-slate-700 text-base font-medium text-white hover:bg-slate-600 focus:outline-none sm:text-sm"
+          >
+            {t('siteAnalysisModal.close')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const { t } = useLanguage();
@@ -45,7 +127,8 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         suggestedGoals, 
         isSuggestingGoals, 
         onUseSuggestedGoal,
-        onFindGrantsForTree
+        onFindGrantsForTree,
+        handleApiError
     } = props;
     
     const mapRef = useRef<HTMLDivElement>(null);
@@ -58,11 +141,27 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const [isGeolocating, setIsGeolocating] = useState(false);
     const [isMapLoading, setIsMapLoading] = useState(true);
 
-    // State for Economic Benefit Analysis
+    // State for Maps Grounding
+    const [mapsQuery, setMapsQuery] = useState('');
+    const [mapsResult, setMapsResult] = useState<GroundedResult | null>(null);
+    const [isMapsLoading, setIsMapsLoading] = useState(false);
+    const [mapsError, setMapsError] = useState<string | null>(null);
+
+    // State for Economic Benefit Analysis (for Trees)
     const [economicAnalysis, setEconomicAnalysis] = useState<Record<string, EconomicBenefitAnalysis | null>>({});
     const [loadingAnalysisFor, setLoadingAnalysisFor] = useState<string | null>(null);
     const [analysisError, setAnalysisError] = useState<Record<string, string | null>>({});
 
+    // State for Site Analysis Modal
+    const [selectedSiteForAnalysis, setSelectedSiteForAnalysis] = useState<PlantingSite | null>(null);
+    const [siteAnalysis, setSiteAnalysis] = useState<SiteAnalysis | null>(null);
+    const [isAnalyzingSite, setIsAnalyzingSite] = useState(false);
+    const [siteAnalysisError, setSiteAnalysisError] = useState<string | null>(null);
+
+    // State for Site Economic Potential Analysis
+    const [siteEconomicAnalysis, setSiteEconomicAnalysis] = useState<Record<string, SiteEconomicAnalysis | null>>({});
+    const [loadingSiteEconomic, setLoadingSiteEconomic] = useState<string | null>(null);
+    const [errorSiteEconomic, setErrorSiteEconomic] = useState<Record<string, string | null>>({});
 
     // This component is rendered inside a Leaflet popup, so it needs access to the language context.
     // It's defined inside the main component to capture the `useLanguage` hook.
@@ -87,6 +186,36 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         );
     };
 
+    const handleAnalyzeSite = useCallback(async (site: PlantingSite) => {
+        setSelectedSiteForAnalysis(site);
+        setIsAnalyzingSite(true);
+        setSiteAnalysis(null);
+        setSiteAnalysisError(null);
+        try {
+            const result = await geminiService.analyzePlantingSite(site);
+            setSiteAnalysis(result);
+        } catch (err) {
+            setSiteAnalysisError(handleApiError(err));
+        } finally {
+            setIsAnalyzingSite(false);
+        }
+    }, [handleApiError]);
+    
+    const handleAnalyzeSiteEconomics = useCallback(async (site: PlantingSite) => {
+        const siteId = site.locationName;
+        setLoadingSiteEconomic(siteId);
+        setErrorSiteEconomic(prev => ({ ...prev, [siteId]: null }));
+        try {
+            const result = await geminiService.analyzeSiteEconomicPotential(site);
+            setSiteEconomicAnalysis(prev => ({ ...prev, [siteId]: result }));
+        } catch (err) {
+            const message = handleApiError(err);
+            setErrorSiteEconomic(prev => ({ ...prev, [siteId]: message }));
+        } finally {
+            setLoadingSiteEconomic(null);
+        }
+    }, [handleApiError]);
+
     useEffect(() => {
         setLatInput(coords?.lat.toFixed(6) || '');
         setLngInput(coords?.lng.toFixed(6) || '');
@@ -95,8 +224,8 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     useEffect(() => {
         if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
             const map = L.map(mapRef.current, {
-                center: [20, 0],
-                zoom: 2,
+                center: [32.4279, 53.6880], // Center of Iran
+                zoom: 5,
             });
             mapInstanceRef.current = map;
 
@@ -230,18 +359,31 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 popupAnchor: [0, -32]
             });
         };
+        
+        const priorityIcons: Record<PlantingSite['priority'], any> = {
+            'Critical': createIcon('#ef4444'), // red-500
+            'High': createIcon('#f97316'),     // orange-500
+            'Medium': createIcon('#eab308'),   // yellow-500
+            'Low': createIcon('#22c55e'),       // green-500
+        };
 
-        const pinkIcon = createIcon('#ec4899'); // pink-500
         const blueIcon = createIcon('#3b82f6'); // blue-500
 
         if (mode === 'locations' && results.length > 0) {
             const latLngs: any[] = [];
             results.forEach(result => {
                 const site = result as PlantingSite;
-                if (typeof site.latitude === 'number' && typeof site.longitude === 'number') {
+                if (typeof site.latitude === 'number' && typeof site.longitude === 'number' && site.priority) {
                     const pos: [number, number] = [site.latitude, site.longitude];
-                    const marker = L.marker(pos, { icon: pinkIcon }).addTo(map)
-                        .bindPopup(`<b>${site.locationName}</b><br>${site.country}`);
+                    const icon = priorityIcons[site.priority] || priorityIcons['Medium'];
+                    const marker = L.marker(pos, { icon }).addTo(map);
+
+                    marker.on('click', () => {
+                        handleAnalyzeSite(site);
+                    });
+                    
+                    marker.bindTooltip(`<b>${site.locationName}</b><br/>Priority: ${site.priority}<br/>Click to analyze`);
+
                     markersRef.current.push(marker);
                     latLngs.push(pos);
                 }
@@ -261,7 +403,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
              markersRef.current.push(marker);
              map.setView(pos, 8);
         }
-    }, [results, mode, coords, t, onFindTrees, setCoords]);
+    }, [results, mode, coords, t, onFindTrees, setCoords, handleAnalyzeSite]);
 
     const handleLocationsSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -284,6 +426,25 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
             alert(t('siteSelector.validationErrorCoords'));
         }
     };
+    
+    const handleMapsSearchSubmit = useCallback(async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!mapsQuery.trim() || !coords) {
+            alert(t('siteSelector.nearbyAnalysis.validation'));
+            return;
+        }
+        setIsMapsLoading(true);
+        setMapsError(null);
+        setMapsResult(null);
+        try {
+            const result = await geminiService.findPlantingSitesWithMaps(mapsQuery, coords);
+            setMapsResult(result);
+        } catch (err) {
+            setMapsError(handleApiError(err));
+        } finally {
+            setIsMapsLoading(false);
+        }
+    }, [mapsQuery, coords, handleApiError, t]);
 
     const handleGeolocate = () => {
         if (navigator.geolocation) {
@@ -325,12 +486,12 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
             const result = await geminiService.calculateEconomicBenefits(tree.commonName, tree.scientificName, coords);
             setEconomicAnalysis(prev => ({ ...prev, [treeId]: result }));
         } catch (err) {
-            const message = err instanceof Error ? err.message : "An unknown error occurred.";
+            const message = handleApiError(err);
             setAnalysisError(prev => ({ ...prev, [treeId]: message }));
         } finally {
             setLoadingAnalysisFor(null);
         }
-    }, [coords]);
+    }, [coords, handleApiError]);
 
     const renderForm = () => (
         <div className="bg-slate-900/60 rounded-lg p-8 shadow-lg backdrop-blur-sm border border-slate-700">
@@ -400,6 +561,20 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                              {isLoading ? t('siteSelector.generating') : t('siteSelector.analyzeCoordsButton')}
                         </button>
                     </form>
+                     <div className="pt-6 border-t border-slate-700/50 space-y-4">
+                        <h4 className="font-semibold text-white">{t('siteSelector.nearbyAnalysis.title')}</h4>
+                        <form onSubmit={handleMapsSearchSubmit} className="space-y-3">
+                             <div>
+                                <label htmlFor="maps-query" className="block text-sm font-medium text-gray-300">{t('siteSelector.nearbyAnalysis.prompt')}</label>
+                                <input type="text" id="maps-query" value={mapsQuery} onChange={e => setMapsQuery(e.target.value)} 
+                                className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
+                                placeholder={t('siteSelector.nearbyAnalysis.placeholder')} />
+                             </div>
+                            <button type="submit" disabled={isMapsLoading || !coords} className="w-full text-center text-sm bg-blue-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
+                                 {isMapsLoading ? t('siteSelector.generating') : t('siteSelector.nearbyAnalysis.button')}
+                            </button>
+                        </form>
+                    </div>
                     <div className="text-center p-4 bg-slate-800/50 rounded-md border border-slate-700">
                         <p className="text-sm text-gray-400">{t('siteSelector.selectOnMap')}</p>
                     </div>
@@ -431,21 +606,104 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     );
     
     const renderResults = () => {
-        const renderLocationCard = (item: PlantingSite, index: number) => (
-            <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
-                <h4 className="text-xl font-bold text-pink-400">{item.locationName}, <span className="text-lg font-medium text-gray-300">{item.country}</span></h4>
-                <div>
-                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.rationale')}</h5>
-                    <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
+        const renderLocationCard = (item: PlantingSite, index: number) => {
+            const siteId = item.locationName;
+            const economicAnalysis = siteEconomicAnalysis[siteId];
+            const isLoadingEconomic = loadingSiteEconomic === siteId;
+            const errorEconomic = errorSiteEconomic[siteId];
+
+            const handleFindGrantsClick = () => {
+                if (!economicAnalysis) return;
+                const query = `Grants for ${economicAnalysis.primaryEconomicDrivers.join(', ')} projects in ${item.locationName}, ${item.country}`;
+                onFindGrantsForTree(query);
+            };
+
+            const priorityStyles: Record<PlantingSite['priority'], string> = {
+                'Critical': 'bg-red-500/20 text-red-300 border-red-500/50',
+                'High': 'bg-orange-500/20 text-orange-300 border-orange-500/50',
+                'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50',
+                'Low': 'bg-green-500/20 text-green-300 border-green-500/50',
+            };
+
+            return (
+                <div key={index} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
+                    <div className="flex justify-between items-start gap-4">
+                        <div>
+                            <h4 className="text-xl font-bold text-pink-400">{item.locationName}</h4>
+                            <p className="text-lg font-medium text-gray-300">{item.country}</p>
+                        </div>
+                        <div className={`text-xs font-bold px-3 py-1 rounded-full border ${priorityStyles[item.priority]}`}>
+                            {item.priority.toUpperCase()} PRIORITY
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.rationale')}</h5>
+                            <div className="prose prose-sm prose-invert max-w-none text-gray-300 bg-slate-900/40 p-3 rounded-md" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
+                        </div>
+                        <div>
+                            <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.species')}</h5>
+                            <div className="flex flex-wrap gap-2">
+                                {item.suggestedSpecies.map(species =>
+                                    <span key={species} className="bg-teal-500/20 text-teal-300 text-xs font-semibold px-2 py-1 rounded-full">{species}</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-700 flex flex-col sm:flex-row gap-3">
+                        <button
+                            onClick={() => handleAnalyzeSite(item)}
+                            className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors"
+                        >
+                            Detailed Site Analysis
+                        </button>
+                        <button
+                            onClick={() => handleAnalyzeSiteEconomics(item)}
+                            disabled={isLoadingEconomic}
+                            className="w-full text-center text-sm bg-purple-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-purple-700 transition-colors disabled:bg-gray-500"
+                        >
+                            {isLoadingEconomic ? t('siteSelector.locationResult.analyzingEconomicPotential') : t('siteSelector.locationResult.analyzeEconomicPotentialButton')}
+                        </button>
+                    </div>
+
+                    {(isLoadingEconomic || economicAnalysis || errorEconomic) && (
+                        <div className="mt-4 p-4 bg-slate-900/50 rounded-md border border-slate-700 animate-fade-in">
+                            <h5 className="font-semibold text-white mb-3">{t('siteSelector.locationResult.economicPotentialTitle')}</h5>
+                            {isLoadingEconomic && (
+                                <div className="flex items-center justify-center text-gray-400">
+                                    <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-purple-400 mr-2"></div>
+                                    <span>{t('siteSelector.locationResult.analyzingEconomicPotential')}</span>
+                                </div>
+                            )}
+                            {errorEconomic && <div className="text-red-400 text-sm">{errorEconomic}</div>}
+                            {economicAnalysis && (
+                                <div className="space-y-3">
+                                    <dl className="text-sm space-y-2">
+                                        <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.locationResult.potentialRevenue')}:</dt><dd className="font-medium text-white text-right">{economicAnalysis.potentialAnnualRevenue}</dd></div>
+                                        <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.locationResult.profitabilityYears')}:</dt><dd className="font-medium text-white">{economicAnalysis.estimatedProfitabilityYears}</dd></div>
+                                        <div className="flex justify-between items-start"><dt className="text-gray-400 flex-shrink-0 mr-2">{t('siteSelector.locationResult.economicDrivers')}:</dt><dd className="font-medium text-white text-right">{economicAnalysis.primaryEconomicDrivers.join(', ')}</dd></div>
+                                        <div>
+                                            <dt className="text-gray-400 mb-1">{t('siteSelector.locationResult.investmentOutlook')}:</dt>
+                                            <dd className="prose prose-xs prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(economicAnalysis.investmentOutlook) }} />
+                                        </div>
+                                    </dl>
+                                    <div className="pt-3 border-t border-slate-700/50">
+                                        <button
+                                            onClick={handleFindGrantsClick}
+                                            className="w-full text-center text-sm bg-blue-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-blue-700 transition-colors"
+                                        >
+                                            {t('siteSelector.locationResult.findGrantsForProjectButton')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
-                <div>
-                    <h5 className="font-semibold text-white mb-2">{t('siteSelector.locationResult.species')}</h5>
-                    <ul className="list-disc list-inside space-y-1">
-                        {item.suggestedSpecies.map(species => <li key={species} className="text-gray-300">{species}</li>)}
-                    </ul>
-                </div>
-            </div>
-        );
+            );
+        };
 
         const renderTreeCard = (item: SuitableTree, index: number) => {
             const treeId = item.scientificName;
@@ -516,7 +774,48 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 <div className="flex justify-between items-center p-4 bg-slate-800/80 border-b border-slate-700">
                     <h3 className="text-lg font-semibold text-white">{t('siteSelector.resultsTitle')}</h3>
                 </div>
-                <div className="p-6 flex-grow overflow-y-auto">
+                <div className="p-6 flex-grow overflow-y-auto space-y-6">
+                     {isMapsLoading && (
+                        <div className="flex items-center justify-center h-full">
+                            <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
+                            <span className="ml-3 text-gray-400">{t('siteSelector.generating')}</span>
+                        </div>
+                    )}
+                    {mapsError && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{mapsError}</div>}
+                    {mapsResult && (
+                        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
+                            <h4 className="text-xl font-bold text-teal-400">{t('siteSelector.nearbyAnalysis.resultsTitle').replace('{query}', mapsQuery)}</h4>
+                            <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(mapsResult.text) }} />
+                            {mapsResult.sources && mapsResult.sources.length > 0 && (
+                                <div>
+                                    <h5 className="font-semibold text-white mt-4 mb-2">{t('grantFinder.sources')}:</h5>
+                                    <ul className="space-y-2 text-sm">
+                                        {mapsResult.sources.map((source, index) => (
+                                            <li key={index} className="bg-slate-900/50 p-2 rounded-md">
+                                                {source.maps && (
+                                                    <div className="space-y-1">
+                                                        <a href={source.maps.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-semibold" title={source.maps.title}>
+                                                            {source.maps.title} ({t('siteSelector.nearbyAnalysis.mapLink')})
+                                                        </a>
+                                                        {source.maps.placeAnswerSources?.reviewSnippets?.map((snippet, sIndex) => (
+                                                            <a key={sIndex} href={snippet.uri} target="_blank" rel="noopener noreferrer" className="block text-xs text-gray-400 hover:text-gray-200 pl-4 italic" title={snippet.text}>
+                                                                - "{snippet.text}" ({t('siteSelector.nearbyAnalysis.reviewLink')})
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {source.web && (
+                                                    <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
+                                                        {source.web.title || source.web.uri}
+                                                    </a>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
                      {isLoading && (
                         <div className="flex items-center justify-center h-full">
                             <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
@@ -532,7 +831,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                             )}
                         </div>
                     )}
-                    {!isLoading && !error && results.length === 0 && (
+                    {!isLoading && !error && results.length === 0 && !isMapsLoading && !mapsResult && (
                         <div className="text-center text-gray-500 flex items-center justify-center h-full">
                             <p>{t('siteSelector.placeholder')}</p>
                         </div>
@@ -542,10 +841,17 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         );
     };
 
-    const legendItems = [
-        { label: t('mapLegend.plantingSite'), color: 'bg-pink-500' },
+    const locationLegendItems = [
+        { label: t('mapLegend.criticalSite'), color: 'bg-red-500' },
+        { label: t('mapLegend.highPrioritySite'), color: 'bg-orange-500' },
+        { label: t('mapLegend.mediumPrioritySite'), color: 'bg-yellow-500' },
+    ];
+    
+    const treeLegendItems = [
         { label: t('mapLegend.selectedPoint'), color: 'bg-blue-500' },
     ];
+
+    const legendItems = mode === 'locations' ? locationLegendItems : treeLegendItems;
 
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
@@ -593,6 +899,14 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     {renderResults()}
                 </div>
             </div>
+            <SiteAnalysisModal 
+                isOpen={!!selectedSiteForAnalysis}
+                onClose={() => setSelectedSiteForAnalysis(null)}
+                site={selectedSiteForAnalysis}
+                analysis={siteAnalysis}
+                isLoading={isAnalyzingSite}
+                error={siteAnalysisError}
+            />
         </div>
     );
 };

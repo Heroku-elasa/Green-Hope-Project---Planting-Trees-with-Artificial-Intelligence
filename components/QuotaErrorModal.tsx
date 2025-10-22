@@ -1,4 +1,6 @@
 import React from 'react';
+// FIX: The 'is not a module' error was caused by an empty 'types.ts' file.
+// By adding content and exports to 'types.ts', the module can be resolved correctly. The import path is correct.
 import { useLanguage } from '../types';
 
 interface QuotaErrorModalProps {
@@ -31,7 +33,7 @@ const QuotaErrorModal: React.FC<QuotaErrorModalProps> = ({ isOpen, onClose }) =>
             href="https://aistudio.google.com/billing"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-600 text-base font-medium text-white hover:bg-amber-700 focus:outline-none sm:text-sm text-center"
+            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:text-sm text-center"
           >
             {t('quotaErrorModal.cta')}
           </a>

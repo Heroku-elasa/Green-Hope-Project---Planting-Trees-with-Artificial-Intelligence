@@ -1,136 +1,242 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>پروژه امید سبز | کاشت درخت با هوش مصنوعی</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Leaflet Draw CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <style>
-      body {
-        font-family: 'Vazirmatn', 'Inter', sans-serif;
-        scroll-behavior: smooth;
-        background-color: #0f172a; /* slate-900 for main app */
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Green Hope Project - Planting Trees with AI</title>
+  
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <script type="importmap">
+  {
+    "imports": {
+      "react/": "https://aistudiocdn.com/react@^19.1.1/",
+      "react": "https://aistudiocdn.com/react@^19.1.1",
+      "@google/genai": "https://aistudiocdn.com/@google/genai@^1.19.0",
+      "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+      "marked": "https://aistudiocdn.com/marked@^16.2.1",
+      "html-to-docx": "https://aistudiocdn.com/html-to-docx@^1.8.0"
+    }
+  }
+  </script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet Draw CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet Draw JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            // Using 'sans' for default, also includes Vazirmatn for Persian text
+            sans: ['Inter', 'Vazirmatn', 'sans-serif'],
+          },
+        }
       }
-      .font-inter {
-         font-family: 'Inter', sans-serif;
-      }
-      .animate-fade-in {
-        animation: fadeIn 0.5s ease-in-out;
-      }
-      @keyframes fadeIn {
+    }
+  </script>
+
+  <style>
+    /* Base styles */
+    html {
+      scroll-behavior: smooth;
+    }
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Strikethrough animation for form completion */
+    .strikethrough-animated {
+        position: relative;
+    }
+    .strikethrough-animated::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 0;
+        height: 1.5px;
+        background: #ec4899; /* pink-500 */
+        transition: width 0.7s ease-in-out;
+        width: 100%;
+    }
+    
+    /* Fade-in animation */
+    @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
-      }
-       .animate-pulse-glow {
-        animation: pulse-glow 2.5s infinite ease-in-out;
-      }
-      @keyframes pulse-glow {
-        0%, 100% {
-          box-shadow: 0 0 0.5rem rgba(52, 211, 153, 0.4);
-        }
-        50% {
-          box-shadow: 0 0 1.5rem rgba(52, 211, 153, 0.7);
-        }
-      }
-      /* Leaflet custom styles */
-      .leaflet-container {
-          background: #334155; /* slate-700 */
-      }
-      .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-        background: #1e293b; /* slate-800 */
-        color: #cbd5e1; /* slate-300 */
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    /* Checkmark animation */
+    @keyframes checkmark-flourish {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .checkmark-flourish {
+      animation: checkmark-flourish 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    
+    /* Parallax styles */
+    .parallax-hero-bg {
+      will-change: transform;
+    }
+
+    /* Fixed background for "window" parallax effect */
+    .subtle-pattern-bg {
+        background-attachment: fixed;
+    }
+
+    /* Prose styles for custom markdown rendering */
+    .prose-docs {
+        direction: ltr;
+        text-align: left;
+    }
+    .prose-docs h1, .prose-docs h2, .prose-docs h3, .prose-docs h4 {
+      color: #fff;
+      border-bottom: 1px solid #4b5563; /* gray-600 */
+      padding-bottom: 0.5em;
+      margin-top: 1.5em;
+    }
+    .prose-docs p, .prose-docs ul, .prose-docs li {
+      color: #d1d5db; /* gray-300 */
+      line-height: 1.7;
+    }
+    .prose-docs code {
+      background-color: #374151; /* gray-700 */
+      color: #f3f4f6; /* gray-100 */
+      padding: 0.2em 0.4em;
+      border-radius: 0.25rem;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+    .prose-docs pre {
+      background-color: #1f2937; /* gray-800 */
+      padding: 1em;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+    }
+    .prose-docs a {
+      color: #93c5fd; /* blue-300 */
+    }
+    .prose-docs a:hover {
+      text-decoration: underline;
+      color: #60a5fa; /* blue-400 */
+    }
+    
+    /* Ken Burns effect for project images */
+    .ken-burns-container {
+        overflow: hidden;
+    }
+    .ken-burns-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        animation: ken-burns 20s ease-in-out infinite alternate;
+        transform-origin: center;
+    }
+    @keyframes ken-burns {
+        0% { transform: scale(1) translate(0, 0); }
+        100% { transform: scale(1.15) translate(5px, -5px); }
+    }
+
+    /* Chatbot Styles */
+    .chat-window {
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease-out;
+        transform-origin: bottom right;
+    }
+    .chat-window.hidden {
+        transform: scale(0);
+        opacity: 0;
+    }
+    .chatbot-fab {
+        transition: transform 0.2s ease-out;
+    }
+    .chatbot-fab:hover {
+        transform: scale(1.1);
+    }
+    .chatbot-fab.open {
+       transform: rotate(180deg) scale(0.9);
+    }
+    
+    /* Custom scrollbar for chat */
+    .chat-messages::-webkit-scrollbar {
+        width: 6px;
+    }
+    .chat-messages::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+        background-color: #4b5563; /* gray-600 */
+        border-radius: 20px;
+    }
+    
+    /* Leaflet popup customization */
+    .leaflet-popup-content-wrapper {
+        background: #1f2937; /* gray-800 */
+        color: #d1d5db; /* gray-300 */
         border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      }
-      .leaflet-popup-content-wrapper {
-        border: 1px solid #475569; /* slate-600 */
-      }
-      .leaflet-popup-close-button {
-        color: #cbd5e1 !important;
-      }
-      .leaflet-popup-close-button:hover {
-        background-color: #334155; /* slate-700 */
-      }
-       /* Leaflet Draw custom styles */
-      .leaflet-draw-toolbar {
-        border-radius: 8px;
-        border: 1px solid #475569;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      }
-      .leaflet-draw-toolbar a {
-        background-color: #1e293b;
-        border-bottom-color: #475569;
-        color: #cbd5e1;
-      }
-      .leaflet-draw-toolbar a:hover {
-        background-color: #334155;
-      }
-       .leaflet-draw-toolbar a.leaflet-draw-draw-polygon {
-        border-radius: 7px 7px 0 0;
-      }
-      .leaflet-draw-toolbar a.leaflet-draw-edit-remove {
-        border-radius: 0 0 7px 7px;
-      }
-      .leaflet-draw-actions {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        border-radius: 6px;
-      }
-      .leaflet-draw-actions a {
-        background-color: #334155;
-        color: #cbd5e1;
-        line-height: 34px;
-      }
-      .leaflet-draw-actions a:hover {
-        background-color: #475569;
-      }
-      .leaflet-draw-tooltip {
-        background-color: #1e293b;
-        border-color: #475569;
-        color: #cbd5e1;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      }
-    </style>
-     <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Vazirmatn', 'Inter', 'sans-serif'],
-            },
-          },
-        },
-      }
-    </script>
-<script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.25.0",
-    "vite": "https://aistudiocdn.com/vite@^7.1.11",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.4"
-  }
-}
-</script>
+        box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-content {
+        margin: 12px;
+        font-family: 'Inter', 'Vazirmatn', sans-serif;
+    }
+    .leaflet-popup-tip {
+        background: #1f2937;
+    }
+    .leaflet-popup-close-button {
+        color: #9ca3af !important; /* gray-400 */
+    }
+    .leaflet-popup-close-button:hover {
+        color: #fff !important;
+    }
+
+    /* Leaflet Draw dark theme customization */
+    .leaflet-draw-toolbar a {
+        background-color: #1f2937; /* gray-800 */
+        border-radius: 4px;
+    }
+    .leaflet-draw-toolbar a:hover {
+        background-color: #374151; /* gray-700 */
+    }
+    .leaflet-draw-actions li:first-child a {
+        border-radius: 4px;
+    }
+    .leaflet-draw-actions a {
+        background-color: #374151 !important; /* Important to override leaflet styles */
+        color: #fff !important;
+    }
+    .leaflet-draw-actions a:hover {
+        background-color: #4b5563 !important;
+    }
+    .leaflet-draw-tooltip {
+        background: #1f2937;
+        border: 1px solid #4b5563;
+        color: #d1d5db;
+    }
+
+  </style>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <!-- Leaflet Draw JS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <script type="module" src="./index.tsx"></script>
-  <script type="module" src="/index.tsx"></script>
+<body class="bg-slate-900">
+  <div id="root"></div>
+  <script type="module" src="./index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
 </body>
 </html>
