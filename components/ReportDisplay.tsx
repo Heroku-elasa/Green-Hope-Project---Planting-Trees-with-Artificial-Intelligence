@@ -63,28 +63,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
     setIsExportMenuOpen(false);
   };
 
-  const handleDownloadDOCX = async () => {
-    const reportHtmlString = marked.parse(generatedReport) as string;
-    try {
-      const htmlToDocxModule = await import('html-to-docx');
-      const htmlToDocx = htmlToDocxModule.default;
-      
-      if (typeof htmlToDocx !== 'function') {
-        console.error('Failed to load html-to-docx function', htmlToDocxModule);
-        throw new Error('Could not convert to DOCX. The library did not load correctly.');
-      }
-
-      const docxBlob = await htmlToDocx(reportHtmlString, '', {
-        margins: { top: 720, right: 720, bottom: 720, left: 720 }
-      });
-      downloadFile('report.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    } catch (e) {
-      console.error("Error converting HTML to DOCX:", e);
-      alert(e instanceof Error ? e.message : "An error occurred while trying to generate the DOCX file.");
-    }
-    setIsExportMenuOpen(false);
-  };
-
   const createHtmlContent = (markdownContent: string) => {
     const parsedHtml = marked.parse(markdownContent) as string;
     return `<!DOCTYPE html>
@@ -112,6 +90,19 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   ${parsedHtml}
 </body>
 </html>`;
+  };
+
+  const handleDownloadDOCX = async () => {
+    const fullHtmlContent = createHtmlContent(generatedReport);
+    try {
+      const htmlDocx = await import('html-docx-js');
+      const docxBlob = htmlDocx.asBlob(fullHtmlContent);
+      downloadFile('report.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    } catch (e) {
+      console.error("Error converting HTML to DOCX:", e);
+      alert(e instanceof Error ? e.message : "An error occurred while trying to generate the DOCX file.");
+    }
+    setIsExportMenuOpen(false);
   };
   
   const handleDownloadHTML = () => {
