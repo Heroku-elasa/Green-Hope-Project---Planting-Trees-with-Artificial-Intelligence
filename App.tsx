@@ -120,8 +120,8 @@ const App: React.FC = () => {
             if (window.google) {
                 // @ts-ignore
                 google.accounts.id.initialize({
-                    // IMPORTANT: Replace with your actual Google Client ID
-                    client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com',
+                    // The Google Client ID is expected to be provided as an environment variable.
+                    client_id: process.env.GOOGLE_CLIENT_ID,
                     callback: handleCredentialResponse,
                 });
                 
