@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, Page, UserProfile } from '../types';
 
@@ -19,10 +18,9 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
     { page: 'home', labelKey: 'nav.home' },
     { page: 'generator', labelKey: 'nav.reportGenerator' },
     { page: 'grant', labelKey: 'nav.grantFinder' },
-    { page: 'siteSelector', labelKey: 'nav.siteSelector' },
     { page: 'video', labelKey: 'nav.videoGenerator' },
-    { page: 'imageEditor', labelKey: 'nav.imageEditor' },
     { page: 'blog', labelKey: 'nav.blogGenerator' },
+    { page: 'composting', labelKey: 'nav.homeComposting' },
     { page: 'projects', labelKey: 'nav.projects' },
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },

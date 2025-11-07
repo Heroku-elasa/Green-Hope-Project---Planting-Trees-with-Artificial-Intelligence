@@ -1,7 +1,5 @@
 {
-  "name": "3 good Green Hope Project - Planting Trees with Artificial Intelligence",
+  "name": "Green Hope Project - Planting Trees with Artificial Intelligence",
   "description": "An application for the Green Hope Project, using AI to plan reforestation efforts, find grants, and generate reports for a greener planet.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
+  "requestFramePermissions": []
 }

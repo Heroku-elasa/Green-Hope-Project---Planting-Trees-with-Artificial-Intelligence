@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
-import { Grant, GroundedResult } from '../types';
+import React from 'react';
+import { Grant } from '../types';
 import { useLanguage } from '../types';
-import { marked } from 'marked';
 
 interface GrantFinderProps {
   onFindGrants: (keywords: string) => void;
-  onFindGrantsWithGrounding: (keywords: string) => void;
   isLoading: boolean;
   error: string | null;
   grants: Grant[];
-  groundedResult: GroundedResult | null;
   onAnalyzeGrant: (grant: Grant) => void;
   keywords: string;
   setKeywords: (keywords: string) => void;
@@ -39,18 +36,13 @@ const GrantItem: React.FC<{ grant: Grant, onAnalyze: (grant: Grant) => void }> =
     );
 };
 
-const GrantFinder: React.FC<GrantFinderProps> = ({ onFindGrants, onFindGrantsWithGrounding, isLoading, error, grants, groundedResult, onAnalyzeGrant, keywords, setKeywords }) => {
+const GrantFinder: React.FC<GrantFinderProps> = ({ onFindGrants, isLoading, error, grants, onAnalyzeGrant, keywords, setKeywords }) => {
   const { t } = useLanguage();
-  const [useGrounding, setUseGrounding] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (keywords.trim()) {
-      if (useGrounding) {
-        onFindGrantsWithGrounding(keywords);
-      } else {
-        onFindGrants(keywords);
-      }
+      onFindGrants(keywords);
     }
   };
 
@@ -75,23 +67,6 @@ const GrantFinder: React.FC<GrantFinderProps> = ({ onFindGrants, onFindGrantsWit
               {isLoading ? t('grantFinder.searching') : t('grantFinder.searchButton')}
             </button>
           </div>
-          <div className="relative flex items-start mt-4">
-              <div className="flex h-6 items-center">
-                  <input
-                      id="use-grounding"
-                      name="use-grounding"
-                      type="checkbox"
-                      checked={useGrounding}
-                      onChange={(e) => setUseGrounding(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-500 bg-slate-700 text-pink-600 focus:ring-pink-500 cursor-pointer"
-                  />
-              </div>
-              <div className="ml-3 text-sm leading-6">
-                  <label htmlFor="use-grounding" className="font-medium text-gray-300 cursor-pointer">
-                      {t('grantFinder.useGrounding')}
-                  </label>
-              </div>
-          </div>
         </form>
 
         <div className="mt-8">
@@ -103,29 +78,7 @@ const GrantFinder: React.FC<GrantFinderProps> = ({ onFindGrants, onFindGrantsWit
             )}
             {error && !isLoading && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{t('grantFinder.error')}: {error}</div>}
             
-            {groundedResult && (
-                <div className="animate-fade-in space-y-6">
-                    <div className="prose prose-sm sm:prose-base prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(groundedResult.text) }} />
-                    {groundedResult.sources && groundedResult.sources.length > 0 && (
-                        <div>
-                            <h4 className="font-semibold text-pink-300 mt-6 mb-2">{t('grantFinder.sources')}:</h4>
-                            <ul className="list-disc list-inside space-y-1 text-sm">
-                                {groundedResult.sources.map((source, index) => (
-                                    source.web && (
-                                        <li key={index}>
-                                            <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
-                                                {source.web.title || source.web.uri}
-                                            </a>
-                                        </li>
-                                    )
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {!isLoading && !error && !groundedResult && grants.length > 0 && (
+            {!isLoading && !error && grants.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                     {grants.map((grant, index) => (
                         <GrantItem key={grant.link || index} grant={grant} onAnalyze={onAnalyzeGrant} />
@@ -133,7 +86,7 @@ const GrantFinder: React.FC<GrantFinderProps> = ({ onFindGrants, onFindGrantsWit
                 </div>
             )}
 
-            {!isLoading && !error && grants.length === 0 && !groundedResult && keywords && (
+            {!isLoading && !error && grants.length === 0 && keywords && (
                  <div className="text-center text-gray-500 py-10">
                     <p>{t('grantFinder.noResults')}</p>
                 </div>

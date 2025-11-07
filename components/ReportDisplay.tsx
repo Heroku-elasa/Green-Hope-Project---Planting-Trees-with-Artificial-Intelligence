@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { marked } from 'marked';
-import { useLanguage, GroundedResult } from '../types';
+import { useLanguage } from '../types';
 
 interface ReportDisplayProps {
-  generatedReport: GroundedResult | null;
+  generatedReport: string;
   isLoading: boolean;
   error: string | null;
 }
@@ -15,22 +15,19 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const [reportHtml, setReportHtml] = useState('');
 
-  const reportText = generatedReport?.text || '';
-  const reportSources = generatedReport?.sources || [];
-
-  const isComplete = !isLoading && reportText.length > 0 && !error;
+  const isComplete = !isLoading && generatedReport.length > 0 && !error;
 
   useEffect(() => {
     if (isLoading) {
       endOfReportRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [reportText, isLoading]);
+  }, [generatedReport, isLoading]);
 
   useEffect(() => {
     let isMounted = true;
     const parseMarkdown = async () => {
-      if (reportText) {
-        const html = await marked.parse(reportText);
+      if (generatedReport) {
+        const html = await marked.parse(generatedReport);
         if (isMounted) setReportHtml(html);
       } else {
         if (isMounted) setReportHtml('');
@@ -38,7 +35,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
     };
     parseMarkdown();
     return () => { isMounted = false; };
-  }, [reportText]);
+  }, [generatedReport]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -63,17 +60,17 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(reportText);
+    navigator.clipboard.writeText(generatedReport);
     setIsExportMenuOpen(false);
   };
   
   const handleDownloadMD = () => {
-    downloadFile('report.md', reportText, 'text/markdown;charset=utf-8');
+    downloadFile('report.md', generatedReport, 'text/markdown;charset=utf-8');
     setIsExportMenuOpen(false);
   };
 
   const handleDownloadDOCX = async () => {
-    const reportHtmlString = await marked.parse(reportText);
+    const reportHtmlString = await marked.parse(generatedReport);
     try {
       const htmlToDocxModule = await import('html-to-docx');
       const htmlToDocx = htmlToDocxModule.default;
@@ -124,13 +121,13 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   };
   
   const handleDownloadHTML = async () => {
-    const htmlContent = await createHtmlContent(reportText);
+    const htmlContent = await createHtmlContent(generatedReport);
     downloadFile('report.html', htmlContent, 'text/html;charset=utf-8');
     setIsExportMenuOpen(false);
   };
 
   const handlePrint = async () => {
-    const htmlContent = await createHtmlContent(reportText);
+    const htmlContent = await createHtmlContent(generatedReport);
     const printWindow = window.open('', '_blank');
     if(printWindow) {
       printWindow.document.write(htmlContent);
@@ -152,7 +149,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
           )}
           {t('reportDisplay.title')}
         </h3>
-        {reportText && !isLoading && (
+        {generatedReport && !isLoading && (
           <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setIsExportMenuOpen(prev => !prev)}
@@ -180,23 +177,6 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
         
         <div dangerouslySetInnerHTML={{ __html: reportHtml }} />
 
-        {reportSources.length > 0 && !isLoading && (
-            <div className="mt-8 pt-6 border-t border-slate-700 animate-fade-in">
-                <h4 className="font-semibold text-pink-300 mb-2">{t('grantFinder.sources')}:</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                    {reportSources.map((source, index) => (
-                        source.web && (
-                            <li key={index}>
-                                <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
-                                    {source.web.title || source.web.uri}
-                                </a>
-                            </li>
-                        )
-                    ))}
-                </ul>
-            </div>
-        )}
-
         {isLoading && (
            <div className="flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-pink-400"></div>
@@ -204,7 +184,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
           </div>
         )}
 
-        {!isLoading && !reportText && !error && (
+        {!isLoading && !generatedReport && !error && (
             <div className="text-center text-gray-500 py-16">
                 <p>{t('reportDisplay.placeholder1')}</p>
                 <p>{t('reportDisplay.placeholder2')}</p>
