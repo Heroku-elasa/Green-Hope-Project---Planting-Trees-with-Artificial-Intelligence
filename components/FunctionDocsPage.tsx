@@ -14,7 +14,7 @@ const FunctionDocsPage: React.FC = () => {
                     throw new Error(`Failed to fetch documentation: ${response.statusText}`);
                 }
                 const text = await response.text();
-                const html = await marked.parse(text);
+                const html = marked.parse(text) as string;
                 setMarkdown(html);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'An unknown error occurred.');

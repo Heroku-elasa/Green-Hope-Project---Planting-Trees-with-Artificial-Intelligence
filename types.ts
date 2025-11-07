@@ -102,30 +102,30 @@ const translations: Record<string, any> = {
         subtitle: "Learn how to manage your kitchen and yard waste to create nutrient-rich soil, reduce landfill, and support a healthier planet, one scrap at a time.",
         methodsTitle: "Choose Your Composting Method",
         methods: [
-            { iconKey: 'hot', title: "Hot Composting", bestFor: "Faster results, larger volumes", effort: "High (frequent turning)", time: "1–3 months" },
-            { iconKey: 'cold', title: "Cold Composting", bestFor: "Low maintenance, small gardens", effort: "Low", time: "6–18 months" },
-            { iconKey: 'vermi', title: "Vermicomposting (Worms)", bestFor: "Indoors, kitchen scraps, small spaces", effort: "Medium", time: "2–4 months" },
-            { iconKey: 'bokashi', title: "Bokashi", bestFor: "Indoors, handles meat/dairy, urban dwellers", effort: "Medium", time: "2–4 weeks (fermentation)" }
+            { iconKey: 'hot', title: "Hot Composting", img: "https://storage.googleapis.com/verdant-assets/compost-hot.jpg", bestFor: "Faster results, larger volumes", effort: "High (frequent turning)", time: "1–3 months" },
+            { iconKey: 'cold', title: "Cold Composting", img: "https://storage.googleapis.com/verdant-assets/compost-cold.jpg", bestFor: "Low maintenance, small gardens", effort: "Low", time: "6–18 months" },
+            { iconKey: 'vermi', title: "Vermicomposting (Worms)", img: "https://storage.googleapis.com/verdant-assets/compost-vermi.jpg", bestFor: "Indoors, kitchen scraps, small spaces", effort: "Medium", time: "2–4 months" },
+            { iconKey: 'bokashi', title: "Bokashi", img: "https://storage.googleapis.com/verdant-assets/compost-bokashi.jpg", bestFor: "Indoors, handles meat/dairy, urban dwellers", effort: "Medium", time: "2–4 weeks (fermentation)" }
         ],
         guideTitle: "Your First Backyard Compost Pile: A Step-by-Step Guide",
         guideSteps: [
-            { iconKey: 'location', title: "1. Choose Your Site", text: "Find a flat, well-drained, and partially shaded spot for your pile or bin." },
-            { iconKey: 'bin', title: "2. Set Up Your Bin", text: "Use a store-bought bin, a DIY structure, or a simple pile. Good airflow is key." },
-            { iconKey: 'layers', title: "3. Layer Your Materials", text: "Start with coarse 'browns' (twigs, cardboard) for drainage, then alternate layers of 'greens' (scraps) and 'browns' (leaves)." },
-            { iconKey: 'activator', title: "4. Add an Activator (Optional)", text: "Kickstart the process by adding a scoop of garden soil, finished compost, or manure." },
-            { iconKey: 'moisture', title: "5. Maintain Moisture", text: "Keep the pile as moist as a wrung-out sponge. Add water if it gets too dry." },
-            { iconKey: 'aerate', title: "6. Aerate the Pile", text: "Turn the compost with a pitchfork every week or two to provide oxygen, which is crucial for hot composting." },
-            { iconKey: 'harvest', title: "7. Harvest Your Compost", text: "Your compost is ready when it's dark, crumbly, and has a rich, earthy smell. Sift and use it in your garden!" }
+            { iconKey: 'location', img: "https://storage.googleapis.com/verdant-assets/compost-guide-1-location.jpg", title: "1. Choose Your Site", text: "Find a flat, well-drained, and partially shaded spot for your pile or bin." },
+            { iconKey: 'bin', img: "https://storage.googleapis.com/verdant-assets/compost-guide-2-bin.jpg", title: "2. Set Up Your Bin", text: "Use a store-bought bin, a DIY structure, or a simple pile. Good airflow is key." },
+            { iconKey: 'layers', img: "https://storage.googleapis.com/verdant-assets/compost-guide-3-layers.jpg", title: "3. Layer Your Materials", text: "Start with coarse 'browns' (twigs, cardboard) for drainage, then alternate layers of 'greens' (scraps) and 'browns' (leaves)." },
+            { iconKey: 'activator', img: "https://storage.googleapis.com/verdant-assets/compost-guide-4-activator.jpg", title: "4. Add an Activator (Optional)", text: "Kickstart the process by adding a scoop of garden soil, finished compost, or manure." },
+            { iconKey: 'moisture', img: "https://storage.googleapis.com/verdant-assets/compost-guide-5-moisture.jpg", title: "5. Maintain Moisture", text: "Keep the pile as moist as a wrung-out sponge. Add water if it gets too dry." },
+            { iconKey: 'aerate', img: "https://storage.googleapis.com/verdant-assets/compost-guide-6-aerate.jpg", title: "6. Aerate the Pile", text: "Turn the compost with a pitchfork every week or two to provide oxygen, which is crucial for hot composting." },
+            { iconKey: 'harvest', img: "https://storage.googleapis.com/verdant-assets/compost-guide-7-harvest.jpg", title: "7. Harvest Your Compost", text: "Your compost is ready when it's dark, crumbly, and has a rich, earthy smell. Sift and use it in your garden!" }
         ],
         businessTitle: "Thinking Bigger? Starting a Compost Business",
         businessSteps: [
-            { title: "Business Model", text: "Decide your focus: residential collection, commercial processing, or selling finished compost products." },
-            { title: "Market Research", text: "Assess local demand, competition, and potential revenue streams like selling high-quality compost or soil blends." },
-            { title: "Permits & Regulations", text: "Comply with all local, state, and environmental regulations for waste processing and business operations." },
-            { title: "Site & Equipment", text: "Secure a suitable location and acquire necessary equipment, from basic tools to heavy machinery for larger scales." },
-            { title: "Secure Material Streams", text: "Establish reliable sources for both nitrogen-rich 'greens' and carbon-rich 'browns'." },
-            { title: "Marketing & Sales", text: "Build an online presence, partner with local nurseries, and engage with community gardens to build your brand." },
-            { title: "Financial Planning", text: "Estimate startup costs, operational expenses, and research potential grants or subsidies for green businesses." }
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-1-model.jpg", title: "Business Model", text: "Decide your focus: residential collection, commercial processing, or selling finished compost products." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-2-market.jpg", title: "Market Research", text: "Assess local demand, competition, and potential revenue streams like selling high-quality compost or soil blends." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-3-permits.jpg", title: "Permits & Regulations", text: "Comply with all local, state, and environmental regulations for waste processing and business operations." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-4-equipment.jpg", title: "Site & Equipment", text: "Secure a suitable location and acquire necessary equipment, from basic tools to heavy machinery for larger scales." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-5-materials.jpg", title: "Secure Material Streams", text: "Establish reliable sources for both nitrogen-rich 'greens' and carbon-rich 'browns'." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-6-marketing.jpg", title: "Marketing & Sales", text: "Build an online presence, partner with local nurseries, and engage with community gardens to build your brand." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-7-finance.jpg", title: "Financial Planning", text: "Estimate startup costs, operational expenses, and research potential grants or subsidies for green businesses." }
         ],
         aiAssistant: {
             title: "AI-Powered Composting Assistant",
@@ -161,6 +161,12 @@ const translations: Record<string, any> = {
             advisorDescription: "Thinking of turning your passion into a business? Ask our AI for ideas, planning steps, and marketing tips.",
             advisorPlaceholder: "e.g., How can I start a small worm farm business in my city?",
             advisorButton: "Ask the Advisor",
+            visionTitle: "Compost Vision Analyzer",
+            visionDescription: "Upload a photo of your compost pile or a specific item, and our AI will analyze it and answer your question.",
+            visionUploadLabel: "Upload Image",
+            visionQuestionLabel: "Your Question",
+            visionQuestionPlaceholder: "e.g., Is this ready to use? What kind of bug is this? Can I compost this?",
+            visionButton: "Analyze Image",
             generating: "Generating...",
             resultTitle: "AI Recommendation"
         },
@@ -423,30 +429,30 @@ const translations: Record<string, any> = {
         subtitle: "یاد بگیرید چگونه پسماندهای آشپزخانه و باغچه خود را مدیریت کرده و خاکی غنی از مواد مغذی بسازید، دفن زباله را کاهش دهید و از سیاره‌ای سالم‌تر حمایت کنید.",
         methodsTitle: "روش کمپوست خود را انتخاب کنید",
         methods: [
-            { iconKey: 'hot', title: "کمپوست گرم", bestFor: "نتایج سریع‌تر، حجم‌های بزرگ‌تر", effort: "زیاد (هم‌زدن مکرر)", time: "۱ تا ۳ ماه" },
-            { iconKey: 'cold', title: "کمپوست سرد", bestFor: "نگهداری کم، باغچه‌های کوچک", effort: "کم", time: "۶ تا ۱۸ ماه" },
-            { iconKey: 'vermi', title: "ورمی کمپوست (کرم‌ها)", bestFor: "داخل خانه، پسماند آشپزخانه، فضاهای کوچک", effort: "متوسط", time: "۲ تا ۴ ماه" },
-            { iconKey: 'bokashi', title: "بوکاشی", bestFor: "داخل خانه، مناسب برای گوشت/لبنیات، ساکنان شهری", effort: "متوسط", time: "۲ تا ۴ هفته (تخمیر)" }
+            { iconKey: 'hot', title: "کمپوست گرم", img: "https://storage.googleapis.com/verdant-assets/compost-hot.jpg", bestFor: "نتایج سریع‌تر، حجم‌های بزرگ‌تر", effort: "زیاد (هم‌زدن مکرر)", time: "۱ تا ۳ ماه" },
+            { iconKey: 'cold', title: "کمپوست سرد", img: "https://storage.googleapis.com/verdant-assets/compost-cold.jpg", bestFor: "نگهداری کم، باغچه‌های کوچک", effort: "کم", time: "۶ تا ۱۸ ماه" },
+            { iconKey: 'vermi', title: "ورمی کمپوست (کرم‌ها)", img: "https://storage.googleapis.com/verdant-assets/compost-vermi.jpg", bestFor: "داخل خانه، پسماند آشپزخانه، فضاهای کوچک", effort: "متوسط", time: "۲ تا ۴ ماه" },
+            { iconKey: 'bokashi', title: "بوکاشی", img: "https://storage.googleapis.com/verdant-assets/compost-bokashi.jpg", bestFor: "داخل خانه، مناسب برای گوشت/لبنیات، ساکنان شهری", effort: "متوسط", time: "۲ تا ۴ هفته (تخمیر)" }
         ],
         guideTitle: "اولین توده کمپوست حیاط شما: راهنمای گام به گام",
         guideSteps: [
-            { iconKey: 'location', title: "۱. مکان خود را انتخاب کنید", text: "یک نقطه صاف، با زه‌کشی خوب و نیمه‌سایه برای توده یا سطل خود پیدا کنید." },
-            { iconKey: 'bin', title: "۲. سطل خود را آماده کنید", text: "از سطل آماده، سازه دست‌ساز یا یک توده ساده استفاده کنید. جریان هوای خوب کلیدی است." },
-            { iconKey: 'layers', title: "۳. مواد را لایه‌لایه بریزید", text: "با مواد 'قهوه‌ای' درشت (شاخه‌ها، مقوا) برای زه‌کشی شروع کنید، سپس لایه‌های 'سبز' (پسماند) و 'قهوه‌ای' (برگ) را به تناوب اضافه کنید." },
-            { iconKey: 'activator', title: "۴. فعال‌کننده اضافه کنید (اختیاری)", text: "با افزودن یک بیلچه خاک باغچه، کمپوست آماده یا کود، فرآیند را تسریع کنید." },
-            { iconKey: 'moisture', title: "۵. رطوبت را حفظ کنید", text: "توده را به اندازه یک اسفنج فشرده مرطوب نگه دارید. اگر خیلی خشک شد، آب اضافه کنید." },
-            { iconKey: 'aerate', title: "۶. توده را هوادهی کنید", text: "هر یک یا دو هفته کمپوست را با چنگک زیر و رو کنید تا اکسیژن فراهم شود که برای کمپوست گرم حیاتی است." },
-            { iconKey: 'harvest', title: "۷. کمپوست خود را برداشت کنید", text: "کمپوست شما زمانی آماده است که تیره، ترد و با بوی غنی و خاکی باشد. آن را الک کرده و در باغچه خود استفاده کنید!" }
+            { iconKey: 'location', img: "https://storage.googleapis.com/verdant-assets/compost-guide-1-location.jpg", title: "۱. مکان خود را انتخاب کنید", text: "یک نقطه صاف، با زه‌کشی خوب و نیمه‌سایه برای توده یا سطل خود پیدا کنید." },
+            { iconKey: 'bin', img: "https://storage.googleapis.com/verdant-assets/compost-guide-2-bin.jpg", title: "۲. سطل خود را آماده کنید", text: "از سطل آماده، سازه دست‌ساز یا یک توده ساده استفاده کنید. جریان هوای خوب کلیدی است." },
+            { iconKey: 'layers', img: "https://storage.googleapis.com/verdant-assets/compost-guide-3-layers.jpg", title: "۳. مواد را لایه‌لایه بریزید", text: "با مواد 'قهوه‌ای' درشت (شاخه‌ها، مقوا) برای زه‌کشی شروع کنید، سپس لایه‌های 'سبز' (پسماند) و 'قهوه‌ای' (برگ) را به تناوب اضافه کنید." },
+            { iconKey: 'activator', img: "https://storage.googleapis.com/verdant-assets/compost-guide-4-activator.jpg", title: "۴. فعال‌کننده اضافه کنید (اختیاری)", text: "با افزودن یک بیلچه خاک باغچه، کمپوست آماده یا کود، فرآیند را تسریع کنید." },
+            { iconKey: 'moisture', img: "https://storage.googleapis.com/verdant-assets/compost-guide-5-moisture.jpg", title: "۵. رطوبت را حفظ کنید", text: "توده را به اندازه یک اسفنج فشرده مرطوب نگه دارید. اگر خیلی خشک شد، آب اضافه کنید." },
+            { iconKey: 'aerate', img: "https://storage.googleapis.com/verdant-assets/compost-guide-6-aerate.jpg", title: "۶. توده را هوادهی کنید", text: "هر یک یا دو هفته کمپوست را با چنگک زیر و رو کنید تا اکسیژن فراهم شود که برای کمپوست گرم حیاتی است." },
+            { iconKey: 'harvest', img: "https://storage.googleapis.com/verdant-assets/compost-guide-7-harvest.jpg", title: "۷. کمپوست خود را برداشت کنید", text: "کمپوست شما زمانی آماده است که تیره، ترد و با بوی غنی و خاکی باشد. آن را الک کرده و در باغچه خود استفاده کنید!" }
         ],
         businessTitle: "بزرگ‌تر فکر می‌کنید؟ راه‌اندازی کسب‌وکار کمپوست",
         businessSteps: [
-            { title: "مدل کسب‌وکار", text: "تمرکز خود را مشخص کنید: جمع‌آوری مسکونی، پردازش تجاری یا فروش محصولات کمپوست نهایی." },
-            { title: "تحقیقات بازار", text: "تقاضای محلی، رقبا و جریان‌های درآمدی بالقوه مانند فروش کمپوست باکیفیت را ارزیابی کنید." },
-            { title: "مجوزها و مقررات", text: "تمام مقررات محلی، ایالتی و زیست‌محیطی برای پردازش پسماند و عملیات تجاری را رعایت کنید." },
-            { title: "مکان و تجهیزات", text: "یک مکان مناسب تهیه کرده و تجهیزات لازم را، از ابزارهای اولیه تا ماشین‌آلات سنگین برای مقیاس‌های بزرگ‌تر، فراهم کنید." },
-            { title: "تأمین جریان مواد", text: "منابع قابل اعتماد برای مواد 'سبز' غنی از نیتروژن و 'قهوه‌ای' غنی از کربن ایجاد کنید." },
-            { title: "بازاریابی و فروش", text: "حضور آنلاین ایجاد کنید، با گلخانه‌های محلی همکاری کرده و با باغ‌های اجتماعی برای ساخت برند خود تعامل کنید." },
-            { title: "برنامه‌ریزی مالی", text: "هزینه‌های راه‌اندازی، هزینه‌های عملیاتی را تخمین زده و در مورد گرنت‌ها یا یارانه‌های بالقوه برای کسب‌وکارهای سبز تحقیق کنید." }
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-1-model.jpg", title: "مدل کسب‌وکار", text: "تمرکز خود را مشخص کنید: جمع‌آوری مسکونی، پردازش تجاری یا فروش محصولات کمپوست نهایی." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-2-market.jpg", title: "تحقیقات بازار", text: "تقاضای محلی، رقبا و جریان‌های درآمدی بالقوه مانند فروش کمپوست باکیفیت را ارزیابی کنید." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-3-permits.jpg", title: "مجوزها و مقررات", text: "تمام مقررات محلی، ایالتی و زیست‌محیطی برای پردازش پسماند و عملیات تجاری را رعایت کنید." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-4-equipment.jpg", title: "مکان و تجهیزات", text: "یک مکان مناسب تهیه کرده و تجهیزات لازم را، از ابزارهای اولیه تا ماشین‌آلات سنگین برای مقیاس‌های بزرگ‌تر، فراهم کنید." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-5-materials.jpg", title: "تأمین جریان مواد", text: "منابع قابل اعتماد برای مواد 'سبز' غنی از نیتروژن و 'قهوه‌ای' غنی از کربن ایجاد کنید." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-6-marketing.jpg", title: "بازاریابی و فروش", text: "حضور آنلاین ایجاد کنید، با گلخانه‌های محلی همکاری کرده و با باغ‌های اجتماعی برای ساخت برند خود تعامل کنید." },
+            { img: "https://storage.googleapis.com/verdant-assets/compost-biz-7-finance.jpg", title: "برنامه‌ریزی مالی", text: "هزینه‌های راه‌اندازی، هزینه‌های عملیاتی را تخمین زده و در مورد گرنت‌ها یا یارانه‌های بالقوه برای کسب‌وکارهای سبز تحقیق کنید." }
         ],
         aiAssistant: {
             title: "دستیار هوشمند کمپوست‌سازی",
@@ -482,6 +488,12 @@ const translations: Record<string, any> = {
             advisorDescription: "به تبدیل علاقه خود به کسب‌وکار فکر می‌کنید؟ از هوش مصنوعی ما برای ایده‌ها، مراحل برنامه‌ریزی و نکات بازاریابی بپرسید.",
             advisorPlaceholder: "مثال: چگونه می‌توانم یک کسب‌وکار کوچک ورمی‌کمپوست در شهرم راه‌اندازی کنم؟",
             advisorButton: "از مشاور بپرس",
+            visionTitle: "تحلیلگر تصویری کمپوست",
+            visionDescription: "عکسی از توده کمپوست یا یک مورد خاص آپلود کنید تا هوش مصنوعی ما آن را تحلیل کرده و به سوال شما پاسخ دهد.",
+            visionUploadLabel: "آپلود تصویر",
+            visionQuestionLabel: "سوال شما",
+            visionQuestionPlaceholder: "مثال: آیا این آماده استفاده است؟ این چه نوع حشره‌ای است؟ آیا می‌توانم این را کمپوست کنم؟",
+            visionButton: "تحلیل تصویر",
             generating: "در حال تولید...",
             resultTitle: "توصیه هوش مصنوعی"
         },

@@ -16,6 +16,10 @@ interface HomeCompostingPageProps {
   isBusinessAdviceLoading: boolean;
   businessAdviceError: string | null;
   onGenerateBusinessIdeas: (query: string) => void;
+  compostVisionResult: string;
+  isCompostVisionLoading: boolean;
+  compostVisionError: string | null;
+  onAnalyzeCompostImage: (imageData: string, mimeType: string, question: string) => void;
 }
 
 const Icon: React.FC<{ iconKey: string; className?: string }> = ({ iconKey, className = "w-12 h-12" }) => {
@@ -34,6 +38,7 @@ const Icon: React.FC<{ iconKey: string; className?: string }> = ({ iconKey, clas
         brain: <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 9.5 7v0A2.5 2.5 0 0 1 7 4.5v0A2.5 2.5 0 0 1 9.5 2Z" /><path d="M14.5 2A2.5 2.5 0 0 1 17 4.5v0A2.5 2.5 0 0 1 14.5 7v0A2.5 2.5 0 0 1 12 4.5v0A2.5 2.5 0 0 1 14.5 2Z" /><path d="M12 7.5c-2 0-2.5-1-4.5-1-2 0-2.5 1-4.5 1" /><path d="M12 7.5c2 0 2.5-1 4.5-1 2 0 2.5 1 4.5 1" /><path d="M4.5 10.5c-1.5 0-2.5.5-2.5 3v0c0 1.5 1 3 2.5 3" /><path d="M19.5 10.5c1.5 0 2.5.5 2.5 3v0c0 1.5-1 3-2.5 3" /><path d="M4.5 14h15" /><path d="M7 16.5c.5 1.5 1.5 3 5 3s4.5-1.5 5-3" /><path d="M10 12.5c0 .5.5 1.5 2 1.5s2-1 2-1.5" /><path d="M7 12c-1-1.5-1-3 0-4.5" /><path d="M17 12c1-1.5 1-3 0-4.5" /></svg>,
         troubleshoot: <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9.06 2 2 1-1 2-2-1-3 2v5l-1 2-2-1-1 3 2 1 1 3 2 1 3-1 1-3 1 2 3-1 2-2-1-2v-5l-2-2-2 1-1-2-1-1Z" /><path d="m9.06 2 6 6" /><path d="M15.06 2l-6 6" /><path d="M12 7.5a4.5 4.5 0 1 1-4.5 4.5 4.5 4.5 0 0 1 4.5-4.5Z" /></svg>,
         advisor: <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L6.5 7.5 7 14l-4 3 2 4h14l2-4-4-3 .5-6.5L12 2z" /><path d="M12 2v6" /><path d="M15.5 9.5 12 12l-3.5-2.5" /></svg>,
+        vision: <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>,
     };
     return icons[iconKey] || <div className={className}></div>;
 };
@@ -43,15 +48,11 @@ const AIResultDisplay: React.FC<{isLoading: boolean, error: string | null, resul
     const [htmlResult, setHtmlResult] = useState('');
 
     useEffect(() => {
-        let isMounted = true;
         if (result) {
-            marked.parse(result).then(html => {
-                if (isMounted) setHtmlResult(html as string);
-            });
+            setHtmlResult(marked.parse(result) as string);
         } else {
             setHtmlResult('');
         }
-        return () => { isMounted = false; };
     }, [result]);
     
     if (!isLoading && !error && !result) {
@@ -77,7 +78,7 @@ const AIResultDisplay: React.FC<{isLoading: boolean, error: string | null, resul
 
 const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
     const { t } = useLanguage();
-    const { setPage, onGenerateCompostPlan, onTroubleshootCompost, onGenerateBusinessIdeas, ...aiProps } = props;
+    const { setPage, onGenerateCompostPlan, onTroubleshootCompost, onGenerateBusinessIdeas, onAnalyzeCompostImage, ...aiProps } = props;
 
     const methods = t('compostingPage.methods');
     const guideSteps = t('compostingPage.guideSteps');
@@ -93,6 +94,11 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
 
     // State for Business Advisor form
     const [query, setQuery] = useState('');
+    
+    // State for Vision Analyzer form
+    const [visionImage, setVisionImage] = useState<string | null>(null);
+    const [visionQuestion, setVisionQuestion] = useState('');
+
 
     const handlePlanSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,6 +113,25 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
     const handleBusinessSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (query.trim()) onGenerateBusinessIdeas(query);
+    };
+    
+    const handleVisionImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setVisionImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    const handleVisionSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (visionImage && visionQuestion.trim()) {
+            const [mimeType, base64Data] = visionImage.split(';base64,');
+            onAnalyzeCompostImage(base64Data, mimeType.replace('data:', ''), visionQuestion);
+        }
     };
 
     return (
@@ -124,16 +149,18 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                     <h2 className="text-3xl font-bold text-center mb-10 text-white">{t('compostingPage.methodsTitle')}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {methods.map((method: any) => (
-                            <div key={method.title} className="bg-slate-800/70 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 p-6 flex flex-col items-center text-center">
-                                <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-r from-purple-800 to-pink-800 mb-4 text-pink-300">
-                                    <Icon iconKey={method.iconKey} className="w-8 h-8"/>
+                            <div key={method.title} className="group bg-slate-800/70 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 overflow-hidden flex flex-col">
+                                <div className="relative h-48 w-full overflow-hidden">
+                                    <img src={method.img} alt={method.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 </div>
-                                <h3 className="text-xl font-bold text-pink-400">{method.title}</h3>
-                                <ul className="mt-4 space-y-2 text-sm text-gray-300 flex-grow">
-                                    <li><strong>Best for:</strong> {method.bestFor}</li>
-                                    <li><strong>Effort:</strong> {method.effort}</li>
-                                    <li><strong>Time:</strong> {method.time}</li>
-                                </ul>
+                                <div className="p-6 flex-grow flex flex-col text-center">
+                                    <h3 className="text-xl font-bold text-pink-400">{method.title}</h3>
+                                    <ul className="mt-4 space-y-2 text-sm text-gray-300 flex-grow">
+                                        <li><strong>Best for:</strong> {method.bestFor}</li>
+                                        <li><strong>Effort:</strong> {method.effort}</li>
+                                        <li><strong>Time:</strong> {method.time}</li>
+                                    </ul>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -142,15 +169,20 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                 {/* Step-by-Step Guide */}
                 <section className="mb-20">
                     <h2 className="text-3xl font-bold text-center mb-10 text-white">{t('compostingPage.guideTitle')}</h2>
-                    <div className="max-w-3xl mx-auto space-y-8">
-                        {guideSteps.map((step: any) => (
-                             <div key={step.title} className="flex items-start space-x-4 rtl:space-x-reverse">
-                                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-slate-700 text-pink-400">
-                                    <Icon iconKey={step.iconKey} className="w-6 h-6" />
+                    <div className="max-w-4xl mx-auto space-y-12">
+                        {guideSteps.map((step: any, index: number) => (
+                             <div key={step.title} className={`flex flex-col md:flex-row items-center gap-8 ${index % 2 === 1 ? 'md:flex-row-reverse rtl:md:flex-row' : 'rtl:md:flex-row-reverse'}`}>
+                                <div className="md:w-1/2 flex-shrink-0">
+                                    <img src={step.img} alt={step.title} className="rounded-lg shadow-lg w-full h-auto object-cover aspect-video" />
                                 </div>
-                                <div>
-                                    <h4 className="text-lg font-semibold text-white">{step.title}</h4>
-                                    <p className="text-gray-400">{step.text}</p>
+                                <div className="md:w-1/2">
+                                    <div className="flex items-center mb-2">
+                                        <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-slate-700 text-pink-400 mr-3 rtl:ml-3 rtl:mr-0">
+                                            <Icon iconKey={step.iconKey} className="w-5 h-5" />
+                                        </div>
+                                        <h4 className="text-xl font-semibold text-white">{step.title}</h4>
+                                    </div>
+                                    <p className="text-gray-400 md:ml-[52px] rtl:md:mr-[52px] rtl:md:ml-0">{step.text}</p>
                                 </div>
                             </div>
                         ))}
@@ -178,19 +210,22 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planWasteLabel')}</label>
                                         <select value={wasteType} onChange={e => setWasteType(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {Object.entries(t('compostingPage.aiAssistant.planWasteOptions')).map(([key, value]) => <option key={key} value={key}>{value}</option>)}
+                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
+                                            {Object.entries(t('compostingPage.aiAssistant.planWasteOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planSpaceLabel')}</label>
                                         <select value={space} onChange={e => setSpace(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {Object.entries(t('compostingPage.aiAssistant.planSpaceOptions')).map(([key, value]) => <option key={key} value={key}>{value}</option>)}
+                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
+                                            {Object.entries(t('compostingPage.aiAssistant.planSpaceOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planClimateLabel')}</label>
                                         <select value={climate} onChange={e => setClimate(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {Object.entries(t('compostingPage.aiAssistant.planClimateOptions')).map(([key, value]) => <option key={key} value={key}>{value}</option>)}
+                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
+                                            {Object.entries(t('compostingPage.aiAssistant.planClimateOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -230,17 +265,64 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                             </form>
                              <AIResultDisplay isLoading={aiProps.isBusinessAdviceLoading} error={aiProps.businessAdviceError} result={aiProps.businessAdvice} title={t('compostingPage.aiAssistant.resultTitle')} />
                         </div>
+                        
+                        {/* Tool 4: Vision Analyzer */}
+                         <div className="bg-slate-800/50 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 p-8">
+                             <div className="flex items-start space-x-4 rtl:space-x-reverse">
+                                <Icon iconKey="vision" className="w-10 h-10 text-pink-400 flex-shrink-0 mt-1"/>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">{t('compostingPage.aiAssistant.visionTitle')}</h3>
+                                    <p className="text-gray-400 mt-1">{t('compostingPage.aiAssistant.visionDescription')}</p>
+                                </div>
+                            </div>
+                            <form onSubmit={handleVisionSubmit} className="mt-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.visionUploadLabel')}</label>
+                                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-600 border-dashed rounded-md">
+                                        <div className="space-y-1 text-center">
+                                            {visionImage ? (
+                                                <img src={visionImage} alt="Compost preview" className="mx-auto h-24 w-auto rounded-md" />
+                                            ) : (
+                                                <svg className="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                            <div className="flex text-sm text-gray-400">
+                                                <label htmlFor="file-upload" className="relative cursor-pointer bg-slate-700 rounded-md font-medium text-pink-400 hover:text-pink-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 focus-within:ring-pink-500 px-3 py-1">
+                                                    <span>Upload a file</span>
+                                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/png, image/jpeg, image/webp" onChange={handleVisionImageChange} />
+                                                </label>
+                                                <p className="pl-1 rtl:pr-1 rtl:pl-0">or drag and drop</p>
+                                            </div>
+                                            <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.visionQuestionLabel')}</label>
+                                     <textarea value={visionQuestion} onChange={e => setVisionQuestion(e.target.value)} rows={3} className="block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white" placeholder={t('compostingPage.aiAssistant.visionQuestionPlaceholder')}></textarea>
+                                </div>
+                                <button type="submit" disabled={aiProps.isCompostVisionLoading || !visionImage || !visionQuestion.trim()} className="w-full md:w-auto flex justify-center py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 disabled:from-gray-500 disabled:to-gray-600 transition-all">{t('compostingPage.aiAssistant.visionButton')}</button>
+                            </form>
+                             <AIResultDisplay isLoading={aiProps.isCompostVisionLoading} error={aiProps.compostVisionError} result={aiProps.compostVisionResult} title={t('compostingPage.aiAssistant.resultTitle')} />
+                        </div>
+
                     </div>
                 </section>
                 
                 {/* Business Section */}
                 <section className="mb-20">
                     <h2 className="text-3xl font-bold text-center mb-10 text-white">{t('compostingPage.businessTitle')}</h2>
-                    <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {businessSteps.map((step: any) => (
-                             <div key={step.title} className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-                                <h4 className="text-lg font-semibold text-pink-400">{step.title}</h4>
-                                <p className="mt-2 text-gray-300">{step.text}</p>
+                             <div key={step.title} className="group bg-slate-800/70 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 overflow-hidden flex flex-col">
+                                <div className="relative h-48 w-full overflow-hidden">
+                                    <img src={step.img} alt={step.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                </div>
+                                <div className="p-6 flex-grow flex flex-col">
+                                    <h4 className="text-lg font-semibold text-pink-400">{step.title}</h4>
+                                    <p className="mt-2 text-gray-300 text-sm flex-grow">{step.text}</p>
+                                </div>
                             </div>
                         ))}
                     </div>

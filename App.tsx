@@ -83,6 +83,10 @@ const App: React.FC = () => {
     const [isBusinessAdviceLoading, setIsBusinessAdviceLoading] = useState(false);
     const [businessAdviceError, setBusinessAdviceError] = useState<string | null>(null);
 
+    const [compostVisionResult, setCompostVisionResult] = useState('');
+    const [isCompostVisionLoading, setIsCompostVisionLoading] = useState(false);
+    const [compostVisionError, setCompostVisionError] = useState<string | null>(null);
+
 
     // General State
     const [isQuotaExhausted, setIsQuotaExhausted] = useState(false);
@@ -343,6 +347,20 @@ const App: React.FC = () => {
         }
     };
 
+    const handleAnalyzeCompostImage = async (imageData: string, mimeType: string, question: string) => {
+        setIsCompostVisionLoading(true);
+        setCompostVisionError(null);
+        setCompostVisionResult('');
+        try {
+            const result = await geminiService.analyzeCompostImage(imageData, mimeType, question);
+            setCompostVisionResult(result);
+        } catch (err) {
+            setCompostVisionError(handleApiError(err));
+        } finally {
+            setIsCompostVisionLoading(false);
+        }
+    };
+
 
     const chatMessagesForComponent: ChatMessage[] = useMemo(() => {
         const initialMessage: ChatMessage = { role: 'system', text: t('chatbot.initialGreeting') };
@@ -383,6 +401,10 @@ const App: React.FC = () => {
                 isBusinessAdviceLoading={isBusinessAdviceLoading}
                 businessAdviceError={businessAdviceError}
                 onGenerateBusinessIdeas={handleGenerateBusinessIdeas}
+                compostVisionResult={compostVisionResult}
+                isCompostVisionLoading={isCompostVisionLoading}
+                compostVisionError={compostVisionError}
+                onAnalyzeCompostImage={handleAnalyzeCompostImage}
             />;
             default: return <HomePage setPage={setPage} />;
         }

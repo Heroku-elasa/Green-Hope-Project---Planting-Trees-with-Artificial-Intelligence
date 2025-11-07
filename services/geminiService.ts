@@ -316,3 +316,27 @@ export const generateCompostBusinessIdeas = async (query: string): Promise<strin
     });
     return response.text;
 };
+
+export const analyzeCompostImage = async (imageData: string, mimeType: string, question: string): Promise<string> => {
+    const systemInstruction = "You are a master composter and environmental scientist. Analyze the user's image and question to provide expert, helpful, and encouraging advice in Markdown format.";
+    
+    const imagePart = {
+      inlineData: {
+        mimeType,
+        data: imageData,
+      },
+    };
+    const textPart = {
+      text: `User's question: "${question}"\n\nPlease analyze the image and answer the question.`
+    };
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts: [imagePart, textPart] },
+        config: {
+            systemInstruction
+        }
+    });
+
+    return response.text;
+};

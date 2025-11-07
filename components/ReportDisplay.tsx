@@ -24,17 +24,11 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   }, [generatedReport, isLoading]);
 
   useEffect(() => {
-    let isMounted = true;
-    const parseMarkdown = async () => {
-      if (generatedReport) {
-        const html = await marked.parse(generatedReport);
-        if (isMounted) setReportHtml(html);
-      } else {
-        if (isMounted) setReportHtml('');
-      }
-    };
-    parseMarkdown();
-    return () => { isMounted = false; };
+    if (generatedReport) {
+      setReportHtml(marked.parse(generatedReport) as string);
+    } else {
+      setReportHtml('');
+    }
   }, [generatedReport]);
 
   useEffect(() => {
@@ -70,7 +64,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   };
 
   const handleDownloadDOCX = async () => {
-    const reportHtmlString = await marked.parse(generatedReport);
+    const reportHtmlString = marked.parse(generatedReport) as string;
     try {
       const htmlToDocxModule = await import('html-to-docx');
       const htmlToDocx = htmlToDocxModule.default;
@@ -91,8 +85,8 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
     setIsExportMenuOpen(false);
   };
 
-  const createHtmlContent = async (markdownContent: string) => {
-    const parsedHtml = await marked.parse(markdownContent);
+  const createHtmlContent = (markdownContent: string) => {
+    const parsedHtml = marked.parse(markdownContent) as string;
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -120,14 +114,14 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
 </html>`;
   };
   
-  const handleDownloadHTML = async () => {
-    const htmlContent = await createHtmlContent(generatedReport);
+  const handleDownloadHTML = () => {
+    const htmlContent = createHtmlContent(generatedReport);
     downloadFile('report.html', htmlContent, 'text/html;charset=utf-8');
     setIsExportMenuOpen(false);
   };
 
-  const handlePrint = async () => {
-    const htmlContent = await createHtmlContent(generatedReport);
+  const handlePrint = () => {
+    const htmlContent = createHtmlContent(generatedReport);
     const printWindow = window.open('', '_blank');
     if(printWindow) {
       printWindow.document.write(htmlContent);
