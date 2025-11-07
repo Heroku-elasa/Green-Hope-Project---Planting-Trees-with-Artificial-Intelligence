@@ -66,7 +66,6 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
             initAndRender();
         } else {
             const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-            // FIX: Add type guard to ensure script is HTMLScriptElement before accessing onload.
             if (script instanceof HTMLScriptElement) {
                 script.onload = initAndRender;
             }

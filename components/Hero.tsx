@@ -5,7 +5,6 @@ interface HomePageProps {
   setPage: (page: AppState['page']) => void;
 }
 
-// FIX: Replaced JSX.Element with React.ReactElement to fix "Cannot find namespace 'JSX'" error.
 const Icon: React.FC<{ iconKey: string; className?: string }> = ({ iconKey, className = "w-12 h-12" }) => {
     const icons: { [key: string]: React.ReactElement } = {
         science: (

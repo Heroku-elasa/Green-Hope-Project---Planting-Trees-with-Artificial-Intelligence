@@ -710,9 +710,6 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     document.documentElement.dir = direction;
   }, [language, direction]);
 
-  // FIX: The "Unexpected token '>'" syntax error was caused by using JSX inside a .ts file.
-  // Replaced the JSX return statement with a `React.createElement` call, which is the
-  // JavaScript equivalent and is valid in a standard TypeScript file.
   return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t, direction } }, children);
 };
 

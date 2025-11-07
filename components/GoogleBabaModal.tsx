@@ -1,6 +1,4 @@
 import React from 'react';
-// FIX: The 'is not a module' error was caused by empty 'types.ts' and 'geminiService.ts' files.
-// By adding content and exports to these files, the modules can be resolved correctly. The import paths are correct.
 import { useLanguage } from '../types';
 import { GrantResult } from '../services/geminiService';
 
