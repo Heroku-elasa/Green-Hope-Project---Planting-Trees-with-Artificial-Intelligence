@@ -171,7 +171,7 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                     <h2 className="text-3xl font-bold text-center mb-10 text-white">{t('compostingPage.guideTitle')}</h2>
                     <div className="max-w-4xl mx-auto space-y-12">
                         {guideSteps.map((step: any, index: number) => (
-                             <div key={step.title} className={`flex flex-col md:flex-row items-center gap-8 ${index % 2 === 1 ? 'md:flex-row-reverse rtl:md:flex-row' : 'rtl:md:flex-row-reverse'}`}>
+                             <div key={step.title} className={`flex flex-col md:flex-row items-center gap-8 ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
                                 <div className="md:w-1/2 flex-shrink-0">
                                     <img src={step.img} alt={step.title} className="rounded-lg shadow-lg w-full h-auto object-cover aspect-video" />
                                 </div>
@@ -210,21 +210,18 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planWasteLabel')}</label>
                                         <select value={wasteType} onChange={e => setWasteType(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
                                             {Object.entries(t('compostingPage.aiAssistant.planWasteOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planSpaceLabel')}</label>
                                         <select value={space} onChange={e => setSpace(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
                                             {Object.entries(t('compostingPage.aiAssistant.planSpaceOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300">{t('compostingPage.aiAssistant.planClimateLabel')}</label>
                                         <select value={climate} onChange={e => setClimate(e.target.value)} className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white">
-                                            {/* FIX: Cast `value` to string to resolve 'unknown' to 'ReactNode' type error. */}
                                             {Object.entries(t('compostingPage.aiAssistant.planClimateOptions')).map(([key, value]) => <option key={key} value={key}>{value as string}</option>)}
                                         </select>
                                     </div>
@@ -283,18 +280,18 @@ const HomeCompostingPage: React.FC<HomeCompostingPageProps> = (props) => {
                                             {visionImage ? (
                                                 <img src={visionImage} alt="Compost preview" className="mx-auto h-24 w-auto rounded-md" />
                                             ) : (
-                                                <svg className="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                <svg className="mx-auto h-12 w-12 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                                                 </svg>
                                             )}
-                                            <div className="flex text-sm text-gray-400">
+                                            <div className="flex justify-center text-sm text-gray-400">
                                                 <label htmlFor="file-upload" className="relative cursor-pointer bg-slate-700 rounded-md font-medium text-pink-400 hover:text-pink-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 focus-within:ring-pink-500 px-3 py-1">
-                                                    <span>Upload a file</span>
+                                                    <span>{t('compostingPage.aiAssistant.visionUploadButton')}</span>
                                                     <input id="file-upload" name="file-upload" type="file" className="sr-only" accept="image/png, image/jpeg, image/webp" onChange={handleVisionImageChange} />
                                                 </label>
-                                                <p className="pl-1 rtl:pr-1 rtl:pl-0">or drag and drop</p>
+                                                <p className="pl-1 rtl:pr-1 rtl:pl-0">{t('compostingPage.aiAssistant.visionDragAndDrop')}</p>
                                             </div>
-                                            <p className="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p>
+                                            <p className="text-xs text-gray-500">{t('compostingPage.aiAssistant.visionFileTypeInfo')}</p>
                                         </div>
                                     </div>
                                 </div>
