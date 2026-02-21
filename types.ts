@@ -162,6 +162,7 @@ const translations: Record<string, any> = {
     },
     reportTypes: {
         reforestation_plan: "Reforestation Plan",
+        tree_planting: "Tree Planting Strategy",
         environmental_report: "Environmental Impact Report",
         funding_proposal: "Funding Proposal",
         species_viability_report: "Species Viability Report",

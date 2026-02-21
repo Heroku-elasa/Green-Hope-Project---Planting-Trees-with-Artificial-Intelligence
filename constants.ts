@@ -1,5 +1,6 @@
 export const REPORT_TYPES = [
   { value: 'reforestation_plan', label: 'Reforestation Plan' },
+  { value: 'tree_planting', label: 'Tree Planting Strategy' },
   { value: 'environmental_report', label: 'Environmental Impact Report' },
   { value: 'funding_proposal', label: 'Funding Proposal' },
   { value: 'species_viability_report', label: 'Species Viability Report' },
