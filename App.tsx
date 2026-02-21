@@ -14,6 +14,7 @@ import TeamPage from './components/TeamPage';
 import FunctionDocsPage from './components/FunctionDocsPage';
 import BlogGenerator from './components/BlogGenerator';
 import CompostingPage from './components/CompostingPage';
+import AdminPanel from './components/admin/AdminPanel';
 import QuotaErrorModal from './components/QuotaErrorModal';
 import Chatbot from './components/Chatbot';
 import LoginModal from './components/LoginModal';
