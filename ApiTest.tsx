@@ -42,8 +42,8 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'Poyo AI',
     enabled: true,
     priority: 1,
-    model: 'kling-1.5',
-    models: ['kling-1.0', 'kling-1.5', 'kling-1.6', 'kling-2.0', 'pika-labs'],
+    model: 'seedream-4.5',
+    models: ['seedream-4.5', 'kling-1.0', 'kling-1.5', 'kling-1.6', 'kling-2.0', 'pika-labs'],
     endpoint: 'api.poyo.ai',
     keyConfigured: true,
     status: 'idle',
@@ -55,18 +55,17 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'OpenRouter',
     enabled: true,
     priority: 2,
-    model: 'google/gemini-flash-1.5',
+    model: 'deepseek/deepseek-r1-0528:free',
     models: [
-      'google/gemini-flash-1.5',
-      'meta-llama/llama-3.2-3b-instruct:free',
-      'mistralai/mistral-7b-instruct:free',
-      'nousresearch/hermes-3-llama-3.1-405b:free',
-      'qwen/qwen-2-7b-instruct:free',
-      'microsoft/phi-3-mini-128k-instruct:free',
+      'deepseek/deepseek-r1-0528:free',
       'stepfun/step-3.5-flash:free',
       'arcee-ai/trinity-large-preview:free',
-      'z-ai/glm-4.5-air:free',
-      'deepseek/deepseek-r1-0528:free'
+      'upstage/solar-pro-3:free',
+      'liquid/lfm-2.5-1.2b-thinking:free',
+      'google/gemini-2.0-flash-001:free',
+      'google/gemini-2.0-pro-exp-02-05:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'qwen/qwen-2.5-72b-instruct:free'
     ],
     endpoint: 'openrouter.ai',
     keyConfigured: true,
@@ -112,9 +111,9 @@ const ApiTest: React.FC = () => {
   const [apiKeys, setApiKeys] = useState({
     portkey: 'ST4fIU5r6s6JvLGE/ad2F+8CCCrU',
     poyo1: 'sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79',
-    poyo2: 'sk-NdIelDiC8dgJXP-uSy-4_03BQnGaCX1xdtVYZXFa9Z1b4FqXF3oProuUg9huz_',
+    poyo2: '',
     openrouter1: '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',
-    openrouter2: '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'
+    openrouter2: ''
   });
 
   useEffect(() => {
@@ -202,7 +201,7 @@ const ApiTest: React.FC = () => {
         }
         url = 'https://api.portkey.ai/v1/chat/completions';
         headers['x-portkey-api-key'] = apiKey;
-        headers['x-portkey-provider'] = 'openai';
+        headers['x-portkey-provider'] = 'google-vertex-ai';
         body = {
           model: model,
           messages: [{ role: 'user', content: testPrompt }],
