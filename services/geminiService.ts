@@ -2,6 +2,9 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse, Content, Modality } from "@google/genai";
 import { Grant, GrantSummary, VideoScene, PlantingSite, SuitableTree, EconomicBenefitAnalysis, Coords, GroundedResult, GroundedSource, SiteAnalysis, SiteEconomicAnalysis, SearchResultItem, DeforestationAnalysis } from "../types";
+import PoYoClient from '../lib/poyoClient';
+
+const poyo = process.env.POYO_API_KEY ? new PoYoClient({ apiKey: process.env.POYO_API_KEY }) : null;
 
 let _ai: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI {
