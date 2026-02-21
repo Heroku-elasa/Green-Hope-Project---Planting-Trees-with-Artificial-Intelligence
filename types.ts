@@ -15,7 +15,8 @@ const translations: Record<string, any> = {
       aiAssistant: "AI Assistant",
       projects: "Projects", 
       team: "Team", 
-      docs: "Function Docs" 
+      docs: "Function Docs",
+      apiTest: "API Test"
     },
     hero: {
         title: "Planting a Greener Tomorrow<br/> with Artificial Intelligence",

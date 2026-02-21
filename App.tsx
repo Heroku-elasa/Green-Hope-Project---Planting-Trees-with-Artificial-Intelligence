@@ -14,6 +14,7 @@ import TeamPage from './components/TeamPage';
 import FunctionDocsPage from './components/FunctionDocsPage';
 import BlogGenerator from './components/BlogGenerator';
 import CompostingPage from './components/CompostingPage';
+import ApiTest from './ApiTest';
 import AdminPanel from './components/admin/AdminPanel';
 import QuotaErrorModal from './components/QuotaErrorModal';
 import Chatbot from './components/Chatbot';
@@ -560,6 +561,7 @@ const App: React.FC = () => {
             case 'projects': return <ProjectsPage />;
             case 'team': return <TeamPage />;
             case 'docs': return <FunctionDocsPage />;
+            case 'api-test': return <ApiTest />;
             case 'generator': return <ReportGenerator onGenerate={handleGenerateReport} generatedReport={generatedReport} isLoading={isLoading} error={error} isComplete={isReportComplete} topic={reportTopic} setTopic={setReportTopic} description={reportDescription} setDescription={setReportDescription} reportType={reportType} setReportType={setReportType} isQuotaExhausted={isQuotaExhausted} />;
             case 'grant': return (<>
                 <GrantFinder onFindGrants={handleFindGrants} onFindGrantsWithGrounding={handleFindGrantsWithGrounding} isLoading={isLoading} error={error} grants={foundGrants} groundedResult={groundedGrants} onAnalyzeGrant={handleAnalyzeGrant} keywords={grantKeywords} setKeywords={setGrantKeywords} />
