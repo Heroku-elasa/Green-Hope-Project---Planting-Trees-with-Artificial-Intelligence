@@ -85,9 +85,12 @@ const GrantAdopter: React.FC<GrantAdopterProps> = ({ grant, isAnalyzing, result,
         if (!result) return;
         const htmlContent = createHtmlForExport(result);
         try {
-            const htmlDocx = await import('html-docx-js');
-            const docxBlob = htmlDocx.asBlob(htmlContent);
-
+            const htmlToDocxModule = await import('html-to-docx');
+            const htmlToDocx = htmlToDocxModule.default;
+            if (typeof htmlToDocx !== 'function') throw new Error('Could not convert to DOCX.');
+            // FIX: Ensure the data is a Blob before creating an object URL, as html-to-docx can return an ArrayBuffer.
+            const docxData = await htmlToDocx(htmlContent, '', { margins: { top: 720, right: 720, bottom: 720, left: 720 } });
+            const docxBlob = docxData instanceof Blob ? docxData : new Blob([docxData], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = URL.createObjectURL(docxBlob);
             const a = document.createElement('a');
             a.href = url;

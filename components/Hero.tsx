@@ -1,10 +1,15 @@
-import React from 'react';
-import { useLanguage, AppState } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLanguage, AppState, Page } from '../types';
+import * as geminiService from '../services/geminiService';
+
+// Declare Leaflet global object to avoid TypeScript errors, as it's loaded from a CDN.
+declare const L: any;
 
 interface HomePageProps {
   setPage: (page: AppState['page']) => void;
 }
 
+// FIX: Replaced JSX.Element with React.ReactElement to fix "Cannot find namespace 'JSX'" error.
 const Icon: React.FC<{ iconKey: string; className?: string }> = ({ iconKey, className = "w-12 h-12" }) => {
     const icons: { [key: string]: React.ReactElement } = {
         science: (
@@ -67,17 +72,85 @@ const Icon: React.FC<{ iconKey: string; className?: string }> = ({ iconKey, clas
 
 const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
   const { t } = useLanguage();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
 
   const handleScrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
   
   const services: { iconKey: string; title: string; text: string }[] = t('home.services');
-  const portfolioItems: { img: string; title: string; link: string; description: string; tags: string[] }[] = t('home.portfolioItems');
+  const portfolioItems: { img: string; title: string; link: string; description: string; tags: string[]; latitude: number; longitude: number; }[] = t('home.portfolioItems');
   const achievements: { iconKey: string; count: number; label: string; suffix: string }[] = t('home.achievements');
   const customerLogos: { img: string; alt: string }[] = t('home.customerLogos');
-  const latestPosts: { img: string; title: string; date: string; comments: number; link: string }[] = t('home.latestPosts');
+  
+  const initialPosts: { img?: string; title: string; date: string; comments: number; link: string }[] = t('home.latestPosts');
+  const [latestPosts, setLatestPosts] = useState(initialPosts);
 
+  useEffect(() => {
+    const generateMissingImages = async () => {
+        const postsToUpdate = latestPosts.map(async (post, index) => {
+            if (!post.img) {
+                try {
+                    const imageUrl = await geminiService.generateBlogImage(post.title);
+                    return { ...post, img: imageUrl };
+                } catch (error) {
+                    console.error(`Failed to generate image for post: "${post.title}"`, error);
+                    return post; // Return original post on error
+                }
+            }
+            return post;
+        });
+
+        const updatedPosts = await Promise.all(postsToUpdate);
+        setLatestPosts(updatedPosts);
+    };
+
+    if (latestPosts.some(p => !p.img)) {
+        generateMissingImages();
+    }
+  }, []); // Run only once on mount
+
+
+  const servicePageMap: { [key: string]: Page } = {
+      science: 'siteSelector',
+      grant: 'grant',
+      education: 'generator',
+      consulting: 'video',
+  };
+  
+  useEffect(() => {
+    if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
+        const map = L.map(mapRef.current, {
+            center: [15, 15],
+            zoom: 2,
+            scrollWheelZoom: false,
+            zoomControl: false,
+        });
+        mapInstanceRef.current = map;
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 10,
+        }).addTo(map);
+        
+        const mapIconSvg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="#10B981"><g><path d="M16 2.5c-4.96 0-8.99 4.03-8.99 8.99 0 1.95.62 3.75 1.68 5.24 0 .01 0 .01 0 .01.01.01.01.02.02.03C9.88 18.25 16 29.5 16 29.5s6.12-11.25 7.29-12.73c.01-.01.01-.02.02-.03 0 0 0-.01 0-.01 1.06-1.49 1.68-3.29 1.68-5.24C24.99 6.53 20.96 2.5 16 2.5zm0 12.25a3.26 3.26 0 110-6.52 3.26 3.26 0 010 6.52z"></path></g></svg>`;
+        const mapIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,' + btoa(mapIconSvg),
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+
+        portfolioItems.forEach(item => {
+            if (item.latitude && item.longitude) {
+                const marker = L.marker([item.latitude, item.longitude], { icon: mapIcon }).addTo(map);
+                marker.bindPopup(`<b>${item.title}</b><p>${item.description.substring(0, 100)}...</p>`);
+            }
+        });
+    }
+  }, [portfolioItems]);
 
   return (
     <div className="animate-fade-in text-white">
@@ -132,13 +205,17 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
             {services.map((service, index) => (
-              <div key={index} className="text-center p-6 bg-slate-900/60 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700">
+              <button 
+                key={index}
+                onClick={() => setPage(servicePageMap[service.iconKey])}
+                className="text-center p-6 bg-slate-900/60 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 transition-all duration-300 hover:border-pink-500/50 hover:bg-slate-800/80 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              >
                 <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-r from-purple-800 to-pink-800 mx-auto text-pink-300">
                     <Icon iconKey={service.iconKey} className="w-8 h-8"/>
                 </div>
                 <h3 className="mt-6 text-lg font-medium text-white">{service.title}</h3>
                 <p className="mt-2 text-base text-gray-400">{service.text}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -193,9 +270,26 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
             </div>
         </div>
       </section>
+      
+      {/* Map Section */}
+      <section className="py-16 sm:py-24 bg-slate-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl font-extrabold text-white sm:text-4xl">{t('home.map.title')}</h2>
+                <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">{t('home.map.subtitle')}</p>
+            </div>
+            <div ref={mapRef} className="h-[60vh] w-full rounded-lg bg-slate-800 border border-slate-700 shadow-lg" />
+            <div className="mt-12 text-center">
+                <button onClick={() => setPage('siteSelector')} className="px-8 py-3 bg-gradient-to-r from-teal-600 to-sky-700 text-white font-semibold rounded-md shadow-lg hover:scale-105 transition-transform">
+                    {t('home.map.button')}
+                </button>
+           </div>
+        </div>
+      </section>
+
 
       {/* Partners Section */}
-      <section className="py-16 sm:py-24 bg-slate-900">
+      <section className="py-16 sm:py-24 bg-slate-800/50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
                 <h2 className="text-3xl font-extrabold text-white sm:text-4xl">{t('home.customersTitle')}</h2>
@@ -213,16 +307,18 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
       </section>
 
       {/* Blog/Insights Section */}
-      <section className="py-16 sm:py-24 bg-slate-800/50">
+      <section className="py-16 sm:py-24 bg-slate-900">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
                 <h2 className="text-3xl font-extrabold text-white sm:text-4xl">{t('home.calendarTitle')}</h2>
             </div>
             <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
                 {latestPosts.map((post, index) => (
-                    <div key={index} className="group flex flex-col overflow-hidden rounded-lg shadow-lg bg-slate-900 border border-slate-700">
-                        <div className="flex-shrink-0">
-                            <img className="h-48 w-full object-cover" src={post.img} alt="" />
+                    <div key={index} className="group flex flex-col overflow-hidden rounded-lg shadow-lg bg-slate-800/70 border border-slate-700">
+                        <div className="flex-shrink-0 h-48 w-full bg-slate-700 animate-pulse">
+                            {post.img && (
+                               <img className="h-48 w-full object-cover" src={post.img} alt={post.title} />
+                            )}
                         </div>
                         <div className="flex flex-1 flex-col justify-between p-6">
                             <div className="flex-1">

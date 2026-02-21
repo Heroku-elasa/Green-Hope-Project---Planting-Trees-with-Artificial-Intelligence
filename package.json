@@ -9,11 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "@google/genai": "^1.19.0",
-    "react-dom": "^19.1.1",
+    "@google/genai": "^1.42.0",
+    "drizzle-zod": "^0.8.3",
+    "html-docx-js": "^0.3.1",
     "marked": "^16.2.1",
-    "html-docx-js": "^0.3.1"
+    "p-limit": "^7.3.0",
+    "p-retry": "^7.1.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.3.6",
+    "zod-validation-error": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

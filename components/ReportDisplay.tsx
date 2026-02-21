@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { marked } from 'marked';
-import { useLanguage } from '../types';
+import { useLanguage, GroundedResult } from '../types';
 
 interface ReportDisplayProps {
-  generatedReport: string;
+  generatedReport: GroundedResult | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -15,21 +15,30 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const [reportHtml, setReportHtml] = useState('');
 
-  const isComplete = !isLoading && generatedReport.length > 0 && !error;
+  const reportText = generatedReport?.text || '';
+  const reportSources = generatedReport?.sources || [];
+
+  const isComplete = !isLoading && reportText.length > 0 && !error;
 
   useEffect(() => {
     if (isLoading) {
       endOfReportRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [generatedReport, isLoading]);
+  }, [reportText, isLoading]);
 
   useEffect(() => {
-    if (generatedReport) {
-      setReportHtml(marked.parse(generatedReport) as string);
-    } else {
-      setReportHtml('');
-    }
-  }, [generatedReport]);
+    let isMounted = true;
+    const parseMarkdown = async () => {
+      if (reportText) {
+        const html = await marked.parse(reportText);
+        if (isMounted) setReportHtml(html);
+      } else {
+        if (isMounted) setReportHtml('');
+      }
+    };
+    parseMarkdown();
+    return () => { isMounted = false; };
+  }, [reportText]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,17 +63,39 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedReport);
+    navigator.clipboard.writeText(reportText);
     setIsExportMenuOpen(false);
   };
   
   const handleDownloadMD = () => {
-    downloadFile('report.md', generatedReport, 'text/markdown;charset=utf-8');
+    downloadFile('report.md', reportText, 'text/markdown;charset=utf-8');
     setIsExportMenuOpen(false);
   };
 
-  const createHtmlContent = (markdownContent: string) => {
-    const parsedHtml = marked.parse(markdownContent) as string;
+  const handleDownloadDOCX = async () => {
+    const reportHtmlString = await marked.parse(reportText);
+    try {
+      const htmlToDocxModule = await import('html-to-docx');
+      const htmlToDocx = htmlToDocxModule.default;
+      
+      if (typeof htmlToDocx !== 'function') {
+        console.error('Failed to load html-to-docx function', htmlToDocxModule);
+        throw new Error('Could not convert to DOCX. The library did not load correctly.');
+      }
+
+      const docxBlob = await htmlToDocx(reportHtmlString, '', {
+        margins: { top: 720, right: 720, bottom: 720, left: 720 }
+      });
+      downloadFile('report.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    } catch (e) {
+      console.error("Error converting HTML to DOCX:", e);
+      alert(e instanceof Error ? e.message : "An error occurred while trying to generate the DOCX file.");
+    }
+    setIsExportMenuOpen(false);
+  };
+
+  const createHtmlContent = async (markdownContent: string) => {
+    const parsedHtml = await marked.parse(markdownContent);
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -91,28 +122,15 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
 </body>
 </html>`;
   };
-
-  const handleDownloadDOCX = async () => {
-    const fullHtmlContent = createHtmlContent(generatedReport);
-    try {
-      const htmlDocx = await import('html-docx-js');
-      const docxBlob = htmlDocx.asBlob(fullHtmlContent);
-      downloadFile('report.docx', docxBlob, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    } catch (e) {
-      console.error("Error converting HTML to DOCX:", e);
-      alert(e instanceof Error ? e.message : "An error occurred while trying to generate the DOCX file.");
-    }
-    setIsExportMenuOpen(false);
-  };
   
-  const handleDownloadHTML = () => {
-    const htmlContent = createHtmlContent(generatedReport);
+  const handleDownloadHTML = async () => {
+    const htmlContent = await createHtmlContent(reportText);
     downloadFile('report.html', htmlContent, 'text/html;charset=utf-8');
     setIsExportMenuOpen(false);
   };
 
-  const handlePrint = () => {
-    const htmlContent = createHtmlContent(generatedReport);
+  const handlePrint = async () => {
+    const htmlContent = await createHtmlContent(reportText);
     const printWindow = window.open('', '_blank');
     if(printWindow) {
       printWindow.document.write(htmlContent);
@@ -134,7 +152,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
           )}
           {t('reportDisplay.title')}
         </h3>
-        {generatedReport && !isLoading && (
+        {reportText && !isLoading && (
           <div className="relative" ref={exportMenuRef}>
             <button
               onClick={() => setIsExportMenuOpen(prev => !prev)}
@@ -162,6 +180,23 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
         
         <div dangerouslySetInnerHTML={{ __html: reportHtml }} />
 
+        {reportSources.length > 0 && !isLoading && (
+            <div className="mt-8 pt-6 border-t border-slate-700 animate-fade-in">
+                <h4 className="font-semibold text-pink-300 mb-2">{t('grantFinder.sources')}:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                    {reportSources.map((source, index) => (
+                        source.web && (
+                            <li key={index}>
+                                <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
+                                    {source.web.title || source.web.uri}
+                                </a>
+                            </li>
+                        )
+                    ))}
+                </ul>
+            </div>
+        )}
+
         {isLoading && (
            <div className="flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-dashed rounded-full animate-spin border-pink-400"></div>
@@ -169,7 +204,7 @@ const ReportDisplay: React.FC<ReportDisplayProps> = ({ generatedReport, isLoadin
           </div>
         )}
 
-        {!isLoading && !generatedReport && !error && (
+        {!isLoading && !reportText && !error && (
             <div className="text-center text-gray-500 py-16">
                 <p>{t('reportDisplay.placeholder1')}</p>
                 <p>{t('reportDisplay.placeholder2')}</p>

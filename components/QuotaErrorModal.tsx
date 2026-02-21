@@ -1,4 +1,6 @@
 import React from 'react';
+// FIX: The 'is not a module' error was caused by an empty 'types.ts' file.
+// By adding content and exports to 'types.ts', the module can be resolved correctly. The import path is correct.
 import { useLanguage } from '../types';
 
 interface QuotaErrorModalProps {

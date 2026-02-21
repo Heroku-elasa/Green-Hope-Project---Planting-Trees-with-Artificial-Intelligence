@@ -3,6 +3,7 @@ import { useLanguage } from '../types';
 
 const SiteFooter: React.FC = () => {
     const { t } = useLanguage();
+    // FIX: Type assertion is now valid because the `t` function's return type is `any`.
     const quickLinks: { text: string; link: string }[] = t('footer.quickLinks');
     const mainPhone = (t('footer.phone') || '').replace(/[^\d+]/g, '');
 

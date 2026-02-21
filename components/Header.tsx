@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useLanguage, Page, UserProfile } from '../types';
 
@@ -6,9 +7,11 @@ interface HeaderProps {
   currentPage: Page;
   user: UserProfile | null;
   onLogout: () => void;
+  onLoginClick: () => void;
+  onSearchClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, onLoginClick, onSearchClick }) => {
   const { language, setLanguage, t } = useLanguage();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -18,9 +21,12 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
     { page: 'home', labelKey: 'nav.home' },
     { page: 'generator', labelKey: 'nav.reportGenerator' },
     { page: 'grant', labelKey: 'nav.grantFinder' },
+    { page: 'siteSelector', labelKey: 'nav.siteSelector' },
     { page: 'video', labelKey: 'nav.videoGenerator' },
+    { page: 'imageEditor', labelKey: 'nav.imageEditor' },
     { page: 'blog', labelKey: 'nav.blogGenerator' },
-    { page: 'composting', labelKey: 'nav.homeComposting' },
+    { page: 'composting', labelKey: 'nav.compostingGuide' },
+    { page: 'aiAssistant', labelKey: 'nav.aiAssistant' },
     { page: 'projects', labelKey: 'nav.projects' },
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
@@ -39,39 +45,6 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
     onLogout();
     setIsProfileMenuOpen(false);
   };
-
-  useEffect(() => {
-    if (!user) {
-        const renderGoogleButton = (elementId: string) => {
-            const element = document.getElementById(elementId);
-            // @ts-ignore
-            if (element && window.google) {
-                // @ts-ignore
-                google.accounts.id.renderButton(
-                    element,
-                    { theme: 'outline', size: 'large', type: 'standard', text: 'signin_with', shape: 'pill' }
-                );
-            }
-        };
-
-        const initAndRender = () => {
-            renderGoogleButton('google-signin-button');
-            if (isMobileMenuOpen) {
-                renderGoogleButton('google-signin-button-mobile');
-            }
-        }
-
-        // @ts-ignore
-        if (window.google) {
-            initAndRender();
-        } else {
-            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-            if (script instanceof HTMLScriptElement) {
-                script.onload = initAndRender;
-            }
-        }
-    }
-  }, [user, isMobileMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -104,6 +77,11 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
             </nav>
           </div>
           <div className="flex items-center">
+             <button onClick={onSearchClick} className="p-2 rounded-full text-gray-400 hover:bg-slate-700 hover:text-white mr-2" aria-label="Search">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </button>
              <div className="flex items-center space-x-2 text-sm mr-4">
                 <button onClick={() => handleLanguageChange('en')} className={`px-2 py-1 rounded ${language === 'en' ? 'bg-pink-500/30 text-pink-300' : 'text-gray-400 hover:bg-slate-700'}`}>EN</button>
                 <button onClick={() => handleLanguageChange('fa')} className={`px-2 py-1 rounded ${language === 'fa' ? 'bg-pink-500/30 text-pink-300' : 'text-gray-400 hover:bg-slate-700'}`}>FA</button>
@@ -134,7 +112,9 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
                         )}
                     </div>
                 ) : (
-                    <div id="google-signin-button"></div>
+                    <button onClick={onLoginClick} className="px-4 py-2 bg-pink-600 text-white text-sm font-semibold rounded-md hover:bg-pink-700 transition-colors">
+                        Login / Sign Up
+                    </button>
                 )}
              </div>
              
@@ -175,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
                 </button>
               ))}
           </div>
-          <div className="px-4 py-3 border-t border-slate-700 flex justify-center">
+          <div className="px-4 py-3 border-t border-slate-700">
             {user ? (
                  <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-3">
@@ -190,7 +170,9 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout })
                     </button>
                 </div>
             ) : (
-                <div id="google-signin-button-mobile"></div>
+                 <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="w-full px-4 py-2 bg-pink-600 text-white text-base font-semibold rounded-md hover:bg-pink-700 transition-colors">
+                    Login / Sign Up
+                </button>
             )}
             </div>
         </nav>

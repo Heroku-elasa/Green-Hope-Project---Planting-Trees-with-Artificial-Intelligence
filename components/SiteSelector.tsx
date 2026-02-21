@@ -1,11 +1,14 @@
+
+
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useLanguage, PlantingSite, SuitableTree, Coords, EconomicBenefitAnalysis, GroundedResult, SiteAnalysis, SiteEconomicAnalysis } from '../types';
+import { useLanguage, PlantingSite, SuitableTree, Coords, EconomicBenefitAnalysis, GroundedResult, SiteAnalysis, SiteEconomicAnalysis, DeforestationAnalysis } from '../types';
 import * as geminiService from '../services/geminiService';
 import { marked } from 'marked';
 import MapLegend from './MapLegend';
 
-type Mode = 'locations' | 'trees';
+type Mode = 'locations' | 'trees' | 'deforestation';
 
 // Declare Leaflet global object to avoid TypeScript errors, as it's loaded from a CDN.
 declare const L: any;
@@ -111,7 +114,7 @@ const SiteAnalysisModal: React.FC<{
 
 
 const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const { 
         onFindLocations, 
         onFindTrees,
@@ -163,6 +166,11 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const [loadingSiteEconomic, setLoadingSiteEconomic] = useState<string | null>(null);
     const [errorSiteEconomic, setErrorSiteEconomic] = useState<Record<string, string | null>>({});
 
+    // State for Deforestation Analysis
+    const [deforestationAnalysis, setDeforestationAnalysis] = useState<DeforestationAnalysis | null>(null);
+    const [isAnalyzingDeforestation, setIsAnalyzingDeforestation] = useState(false);
+    const [deforestationError, setDeforestationError] = useState<string | null>(null);
+
     // This component is rendered inside a Leaflet popup, so it needs access to the language context.
     // It's defined inside the main component to capture the `useLanguage` hook.
     const PopupContent = ({ coords, onConfirm }: { coords: Coords, onConfirm: () => void }) => {
@@ -192,21 +200,34 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         setSiteAnalysis(null);
         setSiteAnalysisError(null);
         try {
-            const result = await geminiService.analyzePlantingSite(site);
+            const result = await geminiService.analyzePlantingSite(site, language);
             setSiteAnalysis(result);
         } catch (err) {
             setSiteAnalysisError(handleApiError(err));
         } finally {
             setIsAnalyzingSite(false);
         }
-    }, [handleApiError]);
+    }, [handleApiError, language]);
+
+    const handleAnalyzeSuggestion = (suggestion: { lat: number, lng: number, note: string }) => {
+        const mockSite: PlantingSite = {
+            locationName: `${t('siteSelector.deforestation.suggestionLabel')} (${suggestion.lat.toFixed(4)}, ${suggestion.lng.toFixed(4)})`,
+            country: t('siteSelector.deforestation.unknownLocation'),
+            latitude: suggestion.lat,
+            longitude: suggestion.lng,
+            rationale: suggestion.note,
+            suggestedSpecies: [t('siteSelector.deforestation.tbdSpecies')],
+            priority: 'High'
+        };
+        handleAnalyzeSite(mockSite);
+    };
     
     const handleAnalyzeSiteEconomics = useCallback(async (site: PlantingSite) => {
         const siteId = site.locationName;
         setLoadingSiteEconomic(siteId);
         setErrorSiteEconomic(prev => ({ ...prev, [siteId]: null }));
         try {
-            const result = await geminiService.analyzeSiteEconomicPotential(site);
+            const result = await geminiService.analyzeSiteEconomicPotential(site, language);
             setSiteEconomicAnalysis(prev => ({ ...prev, [siteId]: result }));
         } catch (err) {
             const message = handleApiError(err);
@@ -214,7 +235,21 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         } finally {
             setLoadingSiteEconomic(null);
         }
-    }, [handleApiError]);
+    }, [handleApiError, language]);
+
+    const handleDeforestationAnalysis = useCallback(async (targetCoords: Coords) => {
+        setIsAnalyzingDeforestation(true);
+        setDeforestationAnalysis(null);
+        setDeforestationError(null);
+        try {
+            const result = await geminiService.analyzeDeforestation(targetCoords, language);
+            setDeforestationAnalysis(result);
+        } catch(err) {
+            setDeforestationError(handleApiError(err));
+        } finally {
+            setIsAnalyzingDeforestation(false);
+        }
+    }, [handleApiError, language]);
 
     useEffect(() => {
         setLatInput(coords?.lat.toFixed(6) || '');
@@ -259,7 +294,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
             }
 
             map.on('click', (e: any) => {
-                 if (mode === 'trees') {
+                 if (mode === 'trees' || mode === 'deforestation') {
                     const { lat, lng } = e.latlng;
                     const latLng = { lat, lng };
 
@@ -273,8 +308,12 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
 
                     const handleConfirm = () => {
                         setCoords(latLng);
-                        onFindTrees(latLng);
                         map.closePopup(popup);
+                        if (mode === 'trees') {
+                            onFindTrees(latLng);
+                        } else {
+                            handleDeforestationAnalysis(latLng);
+                        }
                     };
 
                     root.render(<PopupContent coords={latLng} onConfirm={handleConfirm} />);
@@ -316,9 +355,15 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     newPrompt = t('siteSelector.drawPolygonPrompt').replace('{vertices}', vertices);
                 }
                 
-                if (newPrompt) {
+                if (newPrompt && mode === 'locations') {
                     setLocationsInput(newPrompt);
                     onFindLocations(newPrompt);
+                } else if (mode === 'deforestation' && type !== 'marker') {
+                   // For deforestation, if they draw an area, we can take the center
+                   const center = layer.getBounds().getCenter();
+                   const latLng = { lat: center.lat, lng: center.lng };
+                   setCoords(latLng);
+                   handleDeforestationAnalysis(latLng);
                 }
             });
 
@@ -328,13 +373,13 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 map.invalidateSize();
             }, 100); // A small delay to allow the container to resize
         }
-    }, [t, mode, onFindLocations, onFindTrees, setCoords, setLocationsInput]); 
+    }, [t, onFindLocations, onFindTrees, setCoords, setLocationsInput, mode, handleDeforestationAnalysis]); 
 
     useEffect(() => {
         const map = mapInstanceRef.current;
         const drawControl = drawControlRef.current;
         if (map && drawControl) {
-            if (mode === 'locations') {
+            if (mode === 'locations' || mode === 'deforestation') {
                 map.addControl(drawControl);
             } else {
                 map.removeControl(drawControl);
@@ -368,6 +413,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         };
 
         const blueIcon = createIcon('#3b82f6'); // blue-500
+        const greenIcon = createIcon('#10b981'); // green-500 for replanting
 
         if (mode === 'locations' && results.length > 0) {
             const latLngs: any[] = [];
@@ -402,8 +448,16 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
              });
              markersRef.current.push(marker);
              map.setView(pos, 8);
+        } else if (mode === 'deforestation' && deforestationAnalysis) {
+             // Add replanting suggestion markers
+             deforestationAnalysis.replantingSuggestions.forEach(s => {
+                 const pos: [number, number] = [s.lat, s.lng];
+                 const marker = L.marker(pos, { icon: greenIcon }).addTo(map);
+                 marker.bindPopup(`<b>Replanting Suggestion</b><br/>${s.note}`);
+                 markersRef.current.push(marker);
+             });
         }
-    }, [results, mode, coords, t, onFindTrees, setCoords, handleAnalyzeSite]);
+    }, [results, mode, coords, t, onFindTrees, setCoords, handleAnalyzeSite, deforestationAnalysis]);
 
     const handleLocationsSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -483,7 +537,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         setLoadingAnalysisFor(treeId);
         setAnalysisError(prev => ({ ...prev, [treeId]: null }));
         try {
-            const result = await geminiService.calculateEconomicBenefits(tree.commonName, tree.scientificName, coords);
+            const result = await geminiService.calculateEconomicBenefits(tree.commonName, tree.scientificName, coords, language);
             setEconomicAnalysis(prev => ({ ...prev, [treeId]: result }));
         } catch (err) {
             const message = handleApiError(err);
@@ -491,21 +545,24 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         } finally {
             setLoadingAnalysisFor(null);
         }
-    }, [coords, handleApiError]);
+    }, [coords, handleApiError, language]);
 
     const renderForm = () => (
         <div className="bg-slate-900/60 rounded-lg p-8 shadow-lg backdrop-blur-sm border border-slate-700">
             <div className="mb-6">
-                <div className="flex rounded-md shadow-sm bg-slate-700/80 p-1">
-                    <button onClick={() => setMode('locations')} className={`w-1/2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'locations' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
+                <div className="flex flex-col sm:flex-row rounded-md shadow-sm bg-slate-700/80 p-1">
+                    <button onClick={() => setMode('locations')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'locations' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
                         {t('siteSelector.findLocationsMode')}
                     </button>
-                    <button onClick={() => setMode('trees')} className={`w-1/2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'trees' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
+                    <button onClick={() => setMode('trees')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'trees' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
                         {t('siteSelector.findTreesMode')}
+                    </button>
+                    <button onClick={() => setMode('deforestation')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'deforestation' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
+                        {t('siteSelector.deforestationMode')}
                     </button>
                 </div>
             </div>
-            {mode === 'locations' ? (
+            {mode === 'locations' && (
                 <form onSubmit={handleLocationsSubmit} className="space-y-6">
                     <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-300">{t(`siteSelector.locations.label`)}</label>
@@ -539,7 +596,8 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                         <p className="text-sm text-gray-400">{t('siteSelector.drawArea')}</p>
                     </div>
                 </form>
-            ) : (
+            )}
+            {mode === 'trees' && (
                  <div className="space-y-6">
                     <form onSubmit={handleCoordsSubmit} className="space-y-4 p-4 bg-slate-800/50 rounded-md border border-slate-700">
                         <h4 className="font-bold text-white text-md">{t('siteSelector.manualCoordsTitle')}</h4>
@@ -548,13 +606,13 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                                 <label htmlFor="latitude-input" className="block text-xs font-medium text-gray-300">{t('siteSelector.latitude')}</label>
                                 <input type="number" id="latitude-input" step="any" value={latInput} onChange={(e) => setLatInput(e.target.value)}
                                     className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
-                                    placeholder="e.g., 34.0522" />
+                                    placeholder={t('siteSelector.latitudePlaceholder')} />
                             </div>
                             <div>
                                 <label htmlFor="longitude-input" className="block text-xs font-medium text-gray-300">{t('siteSelector.longitude')}</label>
                                 <input type="number" id="longitude-input" step="any" value={lngInput} onChange={(e) => setLngInput(e.target.value)}
                                     className="mt-1 block w-full bg-slate-700/80 border-slate-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm text-white"
-                                    placeholder="e.g., -118.2437" />
+                                    placeholder={t('siteSelector.longitudePlaceholder')} />
                             </div>
                         </div>
                         <button type="submit" disabled={isLoading} className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed">
@@ -602,10 +660,69 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     )}
                  </div>
             )}
+            {mode === 'deforestation' && (
+                <div className="space-y-6">
+                    <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4">
+                        <h4 className="font-bold text-white text-lg">{t('siteSelector.deforestation.label')}</h4>
+                        <p className="text-sm text-gray-400">{t('siteSelector.selectOnMap')}</p>
+                    </div>
+                    {isAnalyzingDeforestation && (
+                        <div className="flex items-center justify-center py-6">
+                             <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400 mr-3"></div>
+                             <span className="text-gray-300">{t('siteSelector.deforestation.analyzing')}</span>
+                        </div>
+                    )}
+                    {deforestationError && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{deforestationError}</div>}
+                    {deforestationAnalysis && (
+                         <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
+                            <h4 className="text-xl font-bold text-red-400">{t('siteSelector.deforestation.result.title')}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-slate-900/50 p-4 rounded-md">
+                                    <div className="text-xs text-gray-400">{t('siteSelector.deforestation.result.ndviScore')}</div>
+                                    <div className="text-2xl font-bold text-white">{deforestationAnalysis.ndviScore}</div>
+                                </div>
+                                <div className="bg-slate-900/50 p-4 rounded-md">
+                                    <div className="text-xs text-gray-400">{t('siteSelector.deforestation.result.ndviChange')}</div>
+                                    <div className="text-lg font-bold text-red-300">{deforestationAnalysis.ndviChange}</div>
+                                </div>
+                                <div className="bg-slate-900/50 p-4 rounded-md">
+                                    <div className="text-xs text-gray-400">{t('siteSelector.deforestation.result.forestLoss')}</div>
+                                    <div className="text-lg font-bold text-white">{deforestationAnalysis.forestLossEstimate}</div>
+                                </div>
+                                <div className="bg-slate-900/50 p-4 rounded-md">
+                                    <div className="text-xs text-gray-400">{t('siteSelector.deforestation.result.causes')}</div>
+                                    <div className="text-sm text-gray-200">{deforestationAnalysis.causes.join(', ')}</div>
+                                </div>
+                            </div>
+                            <div className="prose prose-sm prose-invert max-w-none text-gray-300 mt-4" dangerouslySetInnerHTML={{ __html: marked.parse(deforestationAnalysis.analysisText) }} />
+                            <div>
+                                <h5 className="font-semibold text-white mb-2">{t('siteSelector.deforestation.result.replantingSuggestions')}</h5>
+                                <ul className="space-y-2">
+                                    {deforestationAnalysis.replantingSuggestions.map((s, idx) => (
+                                        <li key={idx} className="bg-slate-900/50 p-3 rounded-md text-sm text-gray-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                             <div className="flex items-start">
+                                                <span className="text-green-400 mr-2 mt-0.5">●</span>
+                                                <span>{s.note} ({s.lat.toFixed(4)}, {s.lng.toFixed(4)})</span>
+                                             </div>
+                                             <button 
+                                                onClick={() => handleAnalyzeSuggestion(s)}
+                                                className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap self-end sm:self-auto"
+                                             >
+                                                {t('siteSelector.deforestation.analyzeSuggestionButton')}
+                                             </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                         </div>
+                    )}
+                </div>
+            )}
         </div>
     );
     
     const renderResults = () => {
+        // ... (rest of the renderResults logic remains same)
         const renderLocationCard = (item: PlantingSite, index: number) => {
             const siteId = item.locationName;
             const economicAnalysis = siteEconomicAnalysis[siteId];
@@ -657,7 +774,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                             onClick={() => handleAnalyzeSite(item)}
                             className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors"
                         >
-                            Detailed Site Analysis
+                            {t('siteSelector.locationResult.detailedAnalysisButton')}
                         </button>
                         <button
                             onClick={() => handleAnalyzeSiteEconomics(item)}
@@ -823,7 +940,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                         </div>
                     )}
                     {error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{error}</div>}
-                    {!isLoading && !error && results.length > 0 && (
+                    {!isLoading && !error && results.length > 0 && mode !== 'deforestation' && (
                         <div className="space-y-6">
                             {results.map((item, index) => mode === 'locations' 
                                 ? renderLocationCard(item as PlantingSite, index)
@@ -831,7 +948,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                             )}
                         </div>
                     )}
-                    {!isLoading && !error && results.length === 0 && !isMapsLoading && !mapsResult && (
+                    {!isLoading && !error && results.length === 0 && !isMapsLoading && !mapsResult && mode !== 'deforestation' && (
                         <div className="text-center text-gray-500 flex items-center justify-center h-full">
                             <p>{t('siteSelector.placeholder')}</p>
                         </div>
@@ -850,8 +967,12 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const treeLegendItems = [
         { label: t('mapLegend.selectedPoint'), color: 'bg-blue-500' },
     ];
+    
+    const deforestationLegendItems = [
+         { label: t('mapLegend.selectedPoint'), color: 'bg-red-500' }, // Red for deforestation risk area
+    ];
 
-    const legendItems = mode === 'locations' ? locationLegendItems : treeLegendItems;
+    const legendItems = mode === 'locations' ? locationLegendItems : (mode === 'trees' ? treeLegendItems : deforestationLegendItems);
 
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">

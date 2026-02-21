@@ -1,12 +1,14 @@
 import React from 'react';
-import { useLanguage } from '../types';
-import { GrantResult } from '../services/geminiService';
+// FIX: The 'is not a module' error was caused by empty 'types.ts' and 'geminiService.ts' files.
+// By adding content and exports to these files, the modules can be resolved correctly. The import paths are correct.
+// FIX: Replaced incorrect `GrantResult` type with `GroundedResult` and imported it from `types.ts`.
+import { useLanguage, GroundedResult } from '../types';
 
 interface GoogleBabaModalProps {
   isOpen: boolean;
   onClose: () => void;
   isLoading: boolean;
-  result: GrantResult | null;
+  result: GroundedResult | null;
   error: string | null;
   userPrompt: string | null;
 }
@@ -51,11 +53,13 @@ const GoogleBabaModal: React.FC<GoogleBabaModalProps> = ({ isOpen, onClose, isLo
                    <h4 className="font-semibold text-pink-300">{t('googleBabaModal.sourcesTitle')}</h4>
                    <ul className="list-disc list-inside mt-2 space-y-1">
                      {result.sources.map((source, index) => (
-                       <li key={index} className="text-sm">
-                         <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
-                           {source.web.title || source.web.uri}
-                         </a>
-                       </li>
+                       source.web && (
+                         <li key={index} className="text-sm">
+                           <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
+                             {source.web.title || source.web.uri}
+                           </a>
+                         </li>
+                       )
                      ))}
                    </ul>
                 </div>

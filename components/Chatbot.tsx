@@ -89,6 +89,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ messages, onSendMessage, isLoading, s
                                     key={index}
                                     onClick={() => handlePromptClick(prompt)}
                                     className="px-3 py-1 bg-slate-700 text-pink-300 text-xs rounded-full hover:bg-slate-600 transition-colors animate-fade-in"
+                                    style={{ animationDelay: `${index * 100}ms`, opacity: 0 }}
                                 >
                                     {prompt}
                                 </button>
