@@ -42,8 +42,8 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'Poyo AI',
     enabled: true,
     priority: 1,
-    model: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'claude-3-sonnet', 'gemini-pro'],
+    model: 'kling-1.5',
+    models: ['kling-1.0', 'kling-1.5', 'kling-1.6', 'kling-2.0', 'pika-labs'],
     endpoint: 'api.poyo.ai',
     keyConfigured: true,
     status: 'idle',
@@ -55,12 +55,18 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'OpenRouter',
     enabled: true,
     priority: 2,
-    model: 'google/gemini-2.0-flash-exp:free',
+    model: 'google/gemini-flash-1.5',
     models: [
-      'google/gemini-2.0-flash-exp:free',
-      'google/gemini-pro:free',
+      'google/gemini-flash-1.5',
       'meta-llama/llama-3.2-3b-instruct:free',
-      'mistralai/mistral-7b-instruct:free'
+      'mistralai/mistral-7b-instruct:free',
+      'nousresearch/hermes-3-llama-3.1-405b:free',
+      'qwen/qwen-2-7b-instruct:free',
+      'microsoft/phi-3-mini-128k-instruct:free',
+      'stepfun/step-3.5-flash:free',
+      'arcee-ai/trinity-large-preview:free',
+      'z-ai/glm-4.5-air:free',
+      'deepseek/deepseek-r1-0528:free'
     ],
     endpoint: 'openrouter.ai',
     keyConfigured: true,
@@ -73,8 +79,8 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'Portkey',
     enabled: true,
     priority: 3,
-    model: 'gpt-4o-mini',
-    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+    model: 'gpt-3.5-turbo',
+    models: ['gpt-3.5-turbo', 'glm-5-reasoning', 'kimi-k2.5', 'llama-3.2', 'mistral-7b', 'phi-3-mini'],
     endpoint: 'api.portkey.ai',
     keyConfigured: true,
     status: 'idle',
@@ -100,7 +106,7 @@ const ApiTest: React.FC = () => {
     model?: string;
   } | null>(null);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
-  const [testPrompt, setTestPrompt] = useState(isRtl ? 'سلام، یک جمله کوتاه درباره قانون بگو.' : 'Hello, tell me a short sentence about law.');
+  const [testPrompt, setTestPrompt] = useState(isRtl ? 'سلام، یک جمله کوتاه بگو.' : 'Hello, say a short sentence.');
   const [selectedModel, setSelectedModel] = useState<{[key: string]: string}>({});
   
   const [apiKeys, setApiKeys] = useState({
@@ -190,17 +196,22 @@ const ApiTest: React.FC = () => {
           max_tokens: 150
         };
       } else if (id === 'portkey') {
-        if (!apiKeys.portkey) {
+        apiKey = apiKeys.portkey;
+        if (!apiKey) {
           throw new Error(isRtl ? 'کلید Portkey تنظیم نشده است' : 'Portkey key not set');
         }
         url = 'https://api.portkey.ai/v1/chat/completions';
-        headers['x-portkey-api-key'] = apiKeys.portkey;
+        headers['x-portkey-api-key'] = apiKey;
         headers['x-portkey-provider'] = 'openai';
         body = {
           model: model,
           messages: [{ role: 'user', content: testPrompt }],
           max_tokens: 150
         };
+      }
+
+      if (!apiKey || apiKey.trim() === '') {
+        throw new Error(`No valid API key for ${id}`);
       }
 
       const res = await fetch(url, {
@@ -410,7 +421,7 @@ const ApiTest: React.FC = () => {
                         <select
                           value={selectedModel[provider.id] || provider.model}
                           onChange={(e) => setSelectedModel(prev => ({ ...prev, [provider.id]: e.target.value }))}
-                          className="w-full p-2 text-sm border rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          className="w-full p-2 text-sm border rounded-lg dark:bg-gray-600 dark:border-500 dark:text-white"
                         >
                           {provider.models.map(model => (
                             <option key={model} value={model}>{model}</option>
