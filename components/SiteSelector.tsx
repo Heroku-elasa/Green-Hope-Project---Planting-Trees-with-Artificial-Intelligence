@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useLanguage, PlantingSite, SuitableTree, Coords, EconomicBenefitAnalysis, GroundedResult, SiteAnalysis, SiteEconomicAnalysis, DeforestationAnalysis } from '../types';
@@ -10,7 +8,6 @@ import MapLegend from './MapLegend';
 
 type Mode = 'locations' | 'trees' | 'deforestation';
 
-// Declare Leaflet global object to avoid TypeScript errors, as it's loaded from a CDN.
 declare const L: any;
 
 interface SiteSelectorProps {
@@ -115,6 +112,7 @@ const SiteAnalysisModal: React.FC<{
 
 const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const { t, language } = useLanguage();
+    const isRtl = language === 'fa';
     const { 
         onFindLocations, 
         onFindTrees,
@@ -139,40 +137,33 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     const markersRef = useRef<any[]>([]);
     const drawControlRef = useRef<any>(null);
     
-    const [latInput, setLatInput] = useState(coords?.lat.toString() || '');
-    const [lngInput, setLngInput] = useState(coords?.lng.toString() || '');
+    const [latInput, setLatInput] = useState(coords?.lat.toString() || '36.175683');
+    const [lngInput, setLngInput] = useState(coords?.lng.toString() || '58.465929');
     const [isGeolocating, setIsGeolocating] = useState(false);
     const [isMapLoading, setIsMapLoading] = useState(true);
 
-    // State for Maps Grounding
     const [mapsQuery, setMapsQuery] = useState('');
     const [mapsResult, setMapsResult] = useState<GroundedResult | null>(null);
     const [isMapsLoading, setIsMapsLoading] = useState(false);
     const [mapsError, setMapsError] = useState<string | null>(null);
 
-    // State for Economic Benefit Analysis (for Trees)
     const [economicAnalysis, setEconomicAnalysis] = useState<Record<string, EconomicBenefitAnalysis | null>>({});
     const [loadingAnalysisFor, setLoadingAnalysisFor] = useState<string | null>(null);
     const [analysisError, setAnalysisError] = useState<Record<string, string | null>>({});
 
-    // State for Site Analysis Modal
     const [selectedSiteForAnalysis, setSelectedSiteForAnalysis] = useState<PlantingSite | null>(null);
     const [siteAnalysis, setSiteAnalysis] = useState<SiteAnalysis | null>(null);
     const [isAnalyzingSite, setIsAnalyzingSite] = useState(false);
     const [siteAnalysisError, setSiteAnalysisError] = useState<string | null>(null);
 
-    // State for Site Economic Potential Analysis
     const [siteEconomicAnalysis, setSiteEconomicAnalysis] = useState<Record<string, SiteEconomicAnalysis | null>>({});
     const [loadingSiteEconomic, setLoadingSiteEconomic] = useState<string | null>(null);
     const [errorSiteEconomic, setErrorSiteEconomic] = useState<Record<string, string | null>>({});
 
-    // State for Deforestation Analysis
     const [deforestationAnalysis, setDeforestationAnalysis] = useState<DeforestationAnalysis | null>(null);
     const [isAnalyzingDeforestation, setIsAnalyzingDeforestation] = useState(false);
     const [deforestationError, setDeforestationError] = useState<string | null>(null);
 
-    // This component is rendered inside a Leaflet popup, so it needs access to the language context.
-    // It's defined inside the main component to capture the `useLanguage` hook.
     const PopupContent = ({ coords, onConfirm }: { coords: Coords, onConfirm: () => void }) => {
         const { t } = useLanguage();
         return (
@@ -184,7 +175,6 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                         .replace('{lng}', coords.lng.toFixed(4))}
                 </p>
                 <button
-                    // A bit of a hack to get Tailwind styles into dynamically generated Leaflet content
                     className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors"
                     onClick={onConfirm}
                 >
@@ -252,14 +242,14 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     }, [handleApiError, language]);
 
     useEffect(() => {
-        setLatInput(coords?.lat.toFixed(6) || '');
-        setLngInput(coords?.lng.toFixed(6) || '');
+        setLatInput(coords?.lat.toFixed(6) || '36.175683');
+        setLngInput(coords?.lng.toFixed(6) || '58.465929');
     }, [coords]);
 
     useEffect(() => {
         if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
             const map = L.map(mapRef.current, {
-                center: [32.4279, 53.6880], // Center of Iran
+                center: [32.4279, 53.6880],
                 zoom: 5,
             });
             mapInstanceRef.current = map;
@@ -273,8 +263,6 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
             tileLayer.on('load', () => setIsMapLoading(false));
             tileLayer.addTo(map);
 
-
-            // --- Coordinate Tooltip ---
             const mapContainer = mapRef.current;
             if (mapContainer) {
                 const tooltip = document.createElement('div');
@@ -320,7 +308,6 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 }
             });
 
-            // --- Leaflet Draw Initialization ---
             const drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
 
@@ -359,7 +346,6 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     setLocationsInput(newPrompt);
                     onFindLocations(newPrompt);
                 } else if (mode === 'deforestation' && type !== 'marker') {
-                   // For deforestation, if they draw an area, we can take the center
                    const center = layer.getBounds().getCenter();
                    const latLng = { lat: center.lat, lng: center.lng };
                    setCoords(latLng);
@@ -367,11 +353,9 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                 }
             });
 
-
-            // Fix for map not rendering completely on initial load
             setTimeout(() => {
                 map.invalidateSize();
-            }, 100); // A small delay to allow the container to resize
+            }, 100);
         }
     }, [t, onFindLocations, onFindTrees, setCoords, setLocationsInput, mode, handleDeforestationAnalysis]); 
 
@@ -406,14 +390,14 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         };
         
         const priorityIcons: Record<PlantingSite['priority'], any> = {
-            'Critical': createIcon('#ef4444'), // red-500
-            'High': createIcon('#f97316'),     // orange-500
-            'Medium': createIcon('#eab308'),   // yellow-500
-            'Low': createIcon('#22c55e'),       // green-500
+            'Critical': createIcon('#ef4444'),
+            'High': createIcon('#f97316'),
+            'Medium': createIcon('#eab308'),
+            'Low': createIcon('#22c55e'),
         };
 
-        const blueIcon = createIcon('#3b82f6'); // blue-500
-        const greenIcon = createIcon('#10b981'); // green-500 for replanting
+        const blueIcon = createIcon('#3b82f6');
+        const greenIcon = createIcon('#10b981');
 
         if (mode === 'locations' && results.length > 0) {
             const latLngs: any[] = [];
@@ -449,7 +433,6 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
              markersRef.current.push(marker);
              map.setView(pos, 8);
         } else if (mode === 'deforestation' && deforestationAnalysis) {
-             // Add replanting suggestion markers
              deforestationAnalysis.replantingSuggestions.forEach(s => {
                  const pos: [number, number] = [s.lat, s.lng];
                  const marker = L.marker(pos, { icon: greenIcon }).addTo(map);
@@ -514,41 +497,43 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     }
                     setIsGeolocating(false);
                 },
-                (error) => {
+                () => {
                     alert(t('siteSelector.locationError'));
-                    console.error("Geolocation error:", error);
                     setIsGeolocating(false);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                }
             );
-        } else {
-            alert("Geolocation is not supported by this browser.");
         }
     };
-    
+
     const handleExamplePromptClick = (prompt: string) => {
         setLocationsInput(prompt);
         onFindLocations(prompt);
-    }
-    
-    const handleAnalyzeEconomicBenefits = useCallback(async (tree: SuitableTree) => {
-        if (!coords) return;
-        const treeId = tree.scientificName;
-        setLoadingAnalysisFor(treeId);
-        setAnalysisError(prev => ({ ...prev, [treeId]: null }));
-        try {
-            const result = await geminiService.calculateEconomicBenefits(tree.commonName, tree.scientificName, coords, language);
-            setEconomicAnalysis(prev => ({ ...prev, [treeId]: result }));
-        } catch (err) {
-            const message = handleApiError(err);
-            setAnalysisError(prev => ({ ...prev, [treeId]: message }));
-        } finally {
-            setLoadingAnalysisFor(null);
-        }
-    }, [coords, handleApiError, language]);
+    };
 
     const renderForm = () => (
         <div className="bg-slate-900/60 rounded-lg p-8 shadow-lg backdrop-blur-sm border border-slate-700">
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-pink-400 mb-2">
+                    📤 {isRtl ? 'افزودن محتوا (متن یا تصویر):' : 'Add Content (Text or Photo):'}
+                </label>
+                <div className="flex flex-col gap-3 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                    <textarea 
+                        className="w-full p-3 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
+                        placeholder={isRtl ? 'توضیحات متنی خود را اینجا وارد کنید...' : 'Enter your text description here...'}
+                        rows={2}
+                    />
+                    <div className="flex items-center gap-3">
+                        <label className="flex-grow flex items-center justify-center gap-2 p-2 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition-colors text-white text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {isRtl ? 'انتخاب تصویر' : 'Select Photo'}
+                            <input type="file" className="hidden" accept="image/*" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row rounded-md shadow-sm bg-slate-700/80 p-1">
                     <button onClick={() => setMode('locations')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${mode === 'locations' ? 'bg-pink-600 text-white' : 'text-gray-300 hover:bg-slate-600'}`}>
@@ -722,7 +707,20 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
     );
     
     const renderResults = () => {
-        // ... (rest of the renderResults logic remains same)
+        if (results.length === 0 && !isLoading && mode !== 'deforestation') {
+            return (
+                <div className="bg-slate-900/40 rounded-lg p-12 text-center border border-dashed border-slate-700">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-700">
+                        <svg className="w-8 h-8 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">{t('siteSelector.resultsTitle')}</h3>
+                    <p className="text-gray-400 max-w-sm mx-auto">{t('siteSelector.placeholder')}</p>
+                </div>
+            );
+        }
+
         const renderLocationCard = (item: PlantingSite, index: number) => {
             const siteId = item.locationName;
             const economicAnalysis = siteEconomicAnalysis[siteId];
@@ -842,24 +840,35 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                     </div>
                     <div>
                         <h5 className="font-semibold text-white mb-2">{t('siteSelector.treeResult.rationale')}</h5>
-                         <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
+                        <div className="prose prose-sm prose-invert max-w-none text-gray-300 bg-slate-900/40 p-3 rounded-md" dangerouslySetInnerHTML={{ __html: marked.parse(item.rationale) }} />
                     </div>
                     <div className="pt-4 border-t border-slate-700 flex flex-col sm:flex-row gap-3">
-                        <button 
+                        <button
                             onClick={handleFindGrantsClick}
                             className="w-full text-center text-sm bg-teal-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-teal-700 transition-colors"
                         >
                             {t('siteSelector.treeResult.findGrantsButton')}
                         </button>
-                        <button 
-                            onClick={() => handleAnalyzeEconomicBenefits(item)}
+                        <button
+                            onClick={async () => {
+                                setLoadingAnalysisFor(treeId);
+                                try {
+                                    const res = await geminiService.analyzeTreeEconomicBenefits(item, language);
+                                    setEconomicAnalysis(prev => ({ ...prev, [treeId]: res }));
+                                } catch (e) {
+                                    setAnalysisError(prev => ({ ...prev, [treeId]: handleApiError(e) }));
+                                } finally {
+                                    setLoadingAnalysisFor(null);
+                                }
+                            }}
                             disabled={isLoadingAnalysis}
                             className="w-full text-center text-sm bg-purple-600 text-white font-semibold py-2 px-3 rounded-md hover:bg-purple-700 transition-colors disabled:bg-gray-500"
                         >
                             {isLoadingAnalysis ? t('siteSelector.treeResult.analyzingBenefits') : t('siteSelector.treeResult.analyzeBenefitsButton')}
                         </button>
                     </div>
-                    { (isLoadingAnalysis || analysis || errorAnalysis) && (
+
+                    {(isLoadingAnalysis || analysis || errorAnalysis) && (
                         <div className="mt-4 p-4 bg-slate-900/50 rounded-md border border-slate-700 animate-fade-in">
                             <h5 className="font-semibold text-white mb-3">{t('siteSelector.treeResult.economicAnalysisTitle')}</h5>
                             {isLoadingAnalysis && (
@@ -871,13 +880,10 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                             {errorAnalysis && <div className="text-red-400 text-sm">{errorAnalysis}</div>}
                             {analysis && (
                                 <dl className="text-sm space-y-2">
-                                    <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.treeResult.annualRevenue')}:</dt><dd className="font-medium text-white">{analysis.annualRevenuePerTree}</dd></div>
+                                    <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.treeResult.annualRevenue')}:</dt><dd className="font-medium text-white">{analysis.estimatedAnnualRevenuePerTree}</dd></div>
                                     <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.treeResult.yearsToProfit')}:</dt><dd className="font-medium text-white">{analysis.yearsToProfitability}</dd></div>
-                                    <div className="flex justify-between"><dt className="text-gray-400">{t('siteSelector.treeResult.primaryProducts')}:</dt><dd className="font-medium text-white text-right">{analysis.primaryProducts.join(', ')}</dd></div>
-                                    <div>
-                                        <dt className="text-gray-400 mb-1">{t('siteSelector.treeResult.otherBenefits')}:</dt>
-                                        <dd className="prose prose-xs prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(analysis.otherBenefits) }} />
-                                    </div>
+                                    <div className="flex justify-between items-start"><dt className="text-gray-400 flex-shrink-0 mr-2">{t('siteSelector.treeResult.primaryProducts')}:</dt><dd className="font-medium text-white text-right">{analysis.primaryProducts.join(', ')}</dd></div>
+                                    <div className="flex justify-between items-start"><dt className="text-gray-400 flex-shrink-0 mr-2">{t('siteSelector.treeResult.otherBenefits')}:</dt><dd className="font-medium text-white text-right">{analysis.otherEconomicBenefits.join(', ')}</dd></div>
                                 </dl>
                             )}
                         </div>
@@ -887,146 +893,150 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
         };
 
         return (
-            <div className="bg-slate-900/60 rounded-lg shadow-lg backdrop-blur-sm border border-slate-700 min-h-[60vh] flex flex-col">
-                <div className="flex justify-between items-center p-4 bg-slate-800/80 border-b border-slate-700">
-                    <h3 className="text-lg font-semibold text-white">{t('siteSelector.resultsTitle')}</h3>
-                </div>
-                <div className="p-6 flex-grow overflow-y-auto space-y-6">
-                     {isMapsLoading && (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
-                            <span className="ml-3 text-gray-400">{t('siteSelector.generating')}</span>
-                        </div>
-                    )}
-                    {mapsError && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{mapsError}</div>}
-                    {mapsResult && (
-                        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 space-y-4 animate-fade-in">
-                            <h4 className="text-xl font-bold text-teal-400">{t('siteSelector.nearbyAnalysis.resultsTitle').replace('{query}', mapsQuery)}</h4>
-                            <div className="prose prose-sm prose-invert max-w-none text-gray-300" dangerouslySetInnerHTML={{ __html: marked.parse(mapsResult.text) }} />
-                            {mapsResult.sources && mapsResult.sources.length > 0 && (
-                                <div>
-                                    <h5 className="font-semibold text-white mt-4 mb-2">{t('grantFinder.sources')}:</h5>
-                                    <ul className="space-y-2 text-sm">
-                                        {mapsResult.sources.map((source, index) => (
-                                            <li key={index} className="bg-slate-900/50 p-2 rounded-md">
-                                                {source.maps && (
-                                                    <div className="space-y-1">
-                                                        <a href={source.maps.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline font-semibold" title={source.maps.title}>
-                                                            {source.maps.title} ({t('siteSelector.nearbyAnalysis.mapLink')})
-                                                        </a>
-                                                        {source.maps.placeAnswerSources?.reviewSnippets?.map((snippet, sIndex) => (
-                                                            <a key={sIndex} href={snippet.uri} target="_blank" rel="noopener noreferrer" className="block text-xs text-gray-400 hover:text-gray-200 pl-4 italic" title={snippet.text}>
-                                                                - "{snippet.text}" ({t('siteSelector.nearbyAnalysis.reviewLink')})
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {source.web && (
-                                                    <a href={source.web.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline" title={source.web.title}>
-                                                        {source.web.title || source.web.uri}
-                                                    </a>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                     {isLoading && (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="w-8 h-8 border-4 border-dashed rounded-full animate-spin border-pink-400"></div>
-                            <span className="ml-3 text-gray-400">{t('siteSelector.generating')}</span>
-                        </div>
-                    )}
-                    {error && <div className="text-red-400 p-4 bg-red-900/50 rounded-md">{error}</div>}
-                    {!isLoading && !error && results.length > 0 && mode !== 'deforestation' && (
-                        <div className="space-y-6">
-                            {results.map((item, index) => mode === 'locations' 
-                                ? renderLocationCard(item as PlantingSite, index)
-                                : renderTreeCard(item as SuitableTree, index)
-                            )}
-                        </div>
-                    )}
-                    {!isLoading && !error && results.length === 0 && !isMapsLoading && !mapsResult && mode !== 'deforestation' && (
-                        <div className="text-center text-gray-500 flex items-center justify-center h-full">
-                            <p>{t('siteSelector.placeholder')}</p>
-                        </div>
-                    )}
-                </div>
+            <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span className="p-2 bg-pink-500/20 rounded-lg">✨</span>
+                    {t('siteSelector.resultsTitle')}
+                </h3>
+                
+                {mode === 'locations' && (
+                    <div className="grid grid-cols-1 gap-6">
+                        {results.map((item, index) => renderLocationCard(item as PlantingSite, index))}
+                    </div>
+                )}
+                
+                {mode === 'trees' && (
+                    <div className="grid grid-cols-1 gap-6">
+                        {results.map((item, index) => renderTreeCard(item as SuitableTree, index))}
+                    </div>
+                )}
             </div>
         );
     };
 
-    const locationLegendItems = [
-        { label: t('mapLegend.criticalSite'), color: 'bg-red-500' },
-        { label: t('mapLegend.highPrioritySite'), color: 'bg-orange-500' },
-        { label: t('mapLegend.mediumPrioritySite'), color: 'bg-yellow-500' },
-    ];
-    
-    const treeLegendItems = [
-        { label: t('mapLegend.selectedPoint'), color: 'bg-blue-500' },
-    ];
-    
-    const deforestationLegendItems = [
-         { label: t('mapLegend.selectedPoint'), color: 'bg-red-500' }, // Red for deforestation risk area
-    ];
-
-    const legendItems = mode === 'locations' ? locationLegendItems : (mode === 'trees' ? treeLegendItems : deforestationLegendItems);
-
     return (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-            <div className="text-center">
-                <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 tracking-tight">
-                    {t('siteSelector.title')}
-                </h1>
-                <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">{t('siteSelector.subtitle')}</p>
-            </div>
-            
-            <div className="mt-12 max-w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                <div className="lg:sticky top-28">
-                    <div className="relative">
-                        <div ref={mapRef} className="h-[60vh] lg:h-[85vh] w-full rounded-lg bg-slate-800 border border-slate-700 shadow-lg" />
+        <div className={`min-h-screen bg-slate-950 text-slate-100 ${isRtl ? 'rtl' : 'ltr'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-pink-500 to-purple-500 mb-4 drop-shadow-sm">
+                        {t('siteSelector.title')}
+                    </h1>
+                    <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                        {t('siteSelector.subtitle')}
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    <div className="lg:col-span-5 space-y-8 h-full">
+                         {renderForm()}
+                         {mode === 'trees' && mapsResult && (
+                             <div className="bg-slate-900/60 rounded-lg p-8 shadow-lg backdrop-blur-sm border border-slate-700 animate-fade-in">
+                                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                     📍 {t('siteSelector.nearbyAnalysis.resultsTitle').replace('{query}', mapsQuery)}
+                                 </h3>
+                                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                     {mapsResult.places.map((place, idx) => (
+                                         <div key={idx} className="bg-slate-800/60 p-4 rounded-lg border border-slate-700 hover:border-pink-500/30 transition-all group">
+                                             <div className="flex justify-between items-start mb-2">
+                                                 <h4 className="font-bold text-white group-hover:text-pink-400 transition-colors">{place.name}</h4>
+                                                 {place.rating && (
+                                                     <span className="text-yellow-400 text-xs font-bold bg-yellow-400/10 px-2 py-0.5 rounded flex items-center gap-1">
+                                                         ★ {place.rating}
+                                                     </span>
+                                                 )}
+                                             </div>
+                                             <p className="text-xs text-gray-400 mb-3">{place.address}</p>
+                                             <div className="flex gap-2">
+                                                 <a href={place.mapLink} target="_blank" rel="noopener noreferrer" 
+                                                    className="flex-1 text-center py-1.5 px-3 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-bold text-white transition-colors">
+                                                     🗺️ {t('siteSelector.nearbyAnalysis.mapLink')}
+                                                 </a>
+                                                 {place.reviewLink && (
+                                                     <a href={place.reviewLink} target="_blank" rel="noopener noreferrer"
+                                                        className="flex-1 text-center py-1.5 px-3 bg-slate-700 hover:bg-slate-600 rounded text-[10px] font-bold text-white transition-colors">
+                                                         💬 {t('siteSelector.nearbyAnalysis.reviewLink')}
+                                                     </a>
+                                                 )}
+                                             </div>
+                                         </div>
+                                     ))}
+                                 </div>
+                                 <div className="mt-6 pt-6 border-t border-slate-700">
+                                     <div className="prose prose-sm prose-invert text-gray-300" 
+                                          dangerouslySetInnerHTML={{ __html: marked.parse(mapsResult.analysis) }} />
+                                 </div>
+                             </div>
+                         )}
+                         {renderResults()}
+                    </div>
+
+                    <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-8">
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-pink-500 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+                            <div className="relative bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-2xl h-[600px]">
+                                {isMapLoading && (
+                                    <div className="absolute inset-0 z-[1001] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-pink-500 mb-4"></div>
+                                            <span className="text-white font-medium">{t('siteSelector.mapLoading')}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={mapRef} className="w-full h-full z-0" />
+                                
+                                <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
+                                    <button
+                                        onClick={handleGeolocate}
+                                        disabled={isGeolocating}
+                                        className="p-3 bg-slate-900/90 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-all border border-slate-700 group flex items-center gap-2 whitespace-nowrap"
+                                        title={t('siteSelector.findMyLocation')}
+                                    >
+                                        <span className={isGeolocating ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}>
+                                            {isGeolocating ? '⏳' : '📍'}
+                                        </span>
+                                        <span className="text-xs font-bold">{isGeolocating ? t('siteSelector.findingLocation') : t('siteSelector.findMyLocation')}</span>
+                                    </button>
+                                </div>
+                                
+                                <MapLegend isRtl={isRtl} />
+                            </div>
+                        </div>
                         
-                        {isMapLoading && (
-                            <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[1001] rounded-lg transition-opacity duration-300 animate-fade-in">
-                                <div className="flex flex-col items-center text-white">
-                                    <svg className="w-8 h-8 animate-spin text-pink-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <p className="mt-3 text-sm">{t('siteSelector.mapLoading')}</p>
+                        {coords && (
+                            <div className="bg-slate-900/60 p-6 rounded-xl border border-slate-800 backdrop-blur-sm shadow-xl animate-fade-in">
+                                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <span className="w-2 h-2 bg-pink-500 rounded-full"></span>
+                                    {t('siteSelector.selectedCoords')}
+                                </h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-bold">{t('siteSelector.latitude')}</div>
+                                        <div className="text-lg font-mono text-white">{coords.lat.toFixed(6)}</div>
+                                    </div>
+                                    <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-bold">{t('siteSelector.longitude')}</div>
+                                        <div className="text-lg font-mono text-white">{coords.lng.toFixed(6)}</div>
+                                    </div>
                                 </div>
                             </div>
                         )}
-
-                        <MapLegend items={legendItems} />
-                        <button 
-                            onClick={handleGeolocate}
-                            disabled={isGeolocating}
-                            className="absolute top-24 right-2.5 z-[1000] bg-slate-900/70 backdrop-blur-sm rounded-md p-2 border border-white/20 shadow-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-wait"
-                            title={t('siteSelector.findMyLocation')}
-                        >
-                            {isGeolocating ? (
-                                <svg className="w-6 h-6 text-white animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            ) : (
-                                <svg className="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            )}
-                        </button>
+                        
+                        {error && (
+                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm animate-shake">
+                                <span className="mr-2">⚠️</span> {error}
+                            </div>
+                        )}
                     </div>
                 </div>
-                <div className="space-y-12">
-                    {renderForm()}
-                    {renderResults()}
-                </div>
             </div>
-            <SiteAnalysisModal 
-                isOpen={!!selectedSiteForAnalysis}
-                onClose={() => setSelectedSiteForAnalysis(null)}
-                site={selectedSiteForAnalysis}
-                analysis={siteAnalysis}
-                isLoading={isAnalyzingSite}
-                error={siteAnalysisError}
+
+            <SiteAnalysisModal
+              isOpen={!!selectedSiteForAnalysis}
+              onClose={() => setSelectedSiteForAnalysis(null)}
+              site={selectedSiteForAnalysis}
+              analysis={siteAnalysis}
+              isLoading={isAnalyzingSite}
+              error={siteAnalysisError}
             />
         </div>
     );
