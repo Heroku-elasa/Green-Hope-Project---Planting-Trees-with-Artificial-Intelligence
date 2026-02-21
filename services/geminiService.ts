@@ -18,9 +18,14 @@ function getAI(): GoogleGenAI {
 
         const options: any = { apiKey };
         if (replitBaseUrl) {
+            // Use an absolute URL for the Replit AI Integration proxy
             options.httpOptions = {
                 apiVersion: "",
-                baseUrl: replitBaseUrl
+                baseUrl: `${window.location.origin}/__replit_sdk/proxy/1106`
+            };
+        } else {
+            options.httpOptions = {
+                apiVersion: "v1beta"
             };
         }
         
@@ -368,14 +373,14 @@ export const findPlantingSitesWithMaps = async (query: string, userCoords: Coord
     });
 
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
-    const sources: GroundedSource[] = groundingChunks
-        .map(chunk => {
+    const sources: any[] = groundingChunks
+        .map((chunk: any) => {
             if (chunk.maps) return { maps: chunk.maps };
             if (chunk.web) return { web: chunk.web };
             return null;
         })
-        .filter((s): s is GroundedSource => s !== null);
-
+        .filter((s: any) => s !== null);
+    
     return {
         text: response.text,
         sources: sources,
@@ -542,34 +547,46 @@ export const generateSceneVideo = async (description: string): Promise<string[]>
 };
 
 export const generateSceneImage = async (description: string): Promise<string> => {
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: description,
-        config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/jpeg',
-            aspectRatio: '16:9'
-        }
-    });
+    try {
+        const ai = await getAI();
+        const response = await ai.models.generateImages({
+            model: 'imagen-3.0-generate-001',
+            prompt: description,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: '16:9'
+            }
+        });
 
-    const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-    return `data:image/jpeg;base64,${base64ImageBytes}`;
+        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+        return `data:image/jpeg;base64,${base64ImageBytes}`;
+    } catch (error) {
+        console.error("Scene image generation failed:", error);
+        return "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000";
+    }
 };
 
 export const generateBlogImage = async (title: string): Promise<string> => {
-    const prompt = `A photorealistic, hopeful, and inspiring image for a blog post titled: '${title}'. The image should be suitable for an environmental organization focused on reforestation. The main subject should be clear and visually appealing. Avoid text overlays. Aspect ratio 16:9.`;
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
-        config: {
-            numberOfImages: 1,
-            outputMimeType: 'image/jpeg',
-            aspectRatio: '16:9'
-        }
-    });
+    try {
+        const ai = await getAI();
+        const prompt = `A photorealistic, hopeful, and inspiring image for a blog post titled: '${title}'. The image should be suitable for an environmental organization focused on reforestation. The main subject should be clear and visually appealing. Avoid text overlays. Aspect ratio 16:9.`;
+        const response = await ai.models.generateImages({
+            model: 'imagen-3.0-generate-001',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: '16:9'
+            }
+        });
 
-    const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-    return `data:image/jpeg;base64,${base64ImageBytes}`;
+        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+        return `data:image/jpeg;base64,${base64ImageBytes}`;
+    } catch (error) {
+        console.error("Blog image generation failed:", error);
+        return "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000";
+    }
 };
 
 export const editImage = async (base64ImageData: string, mimeType: string, prompt: string): Promise<string> => {

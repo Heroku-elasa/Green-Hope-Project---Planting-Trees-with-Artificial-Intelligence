@@ -92,7 +92,8 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
         const postsToUpdate = latestPosts.map(async (post, index) => {
             if (!post.img) {
                 try {
-                    const imageUrl = await geminiService.generateBlogImage(post.title);
+                    // Use a fallback if image generation fails to prevent site crash
+                    const imageUrl = await geminiService.generateBlogImage(post.title).catch(() => "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000");
                     return { ...post, img: imageUrl };
                 } catch (error) {
                     console.error(`Failed to generate image for post: "${post.title}"`, error);
