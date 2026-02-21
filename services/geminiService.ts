@@ -15,8 +15,8 @@ function getAI(): GoogleGenAI {
         const options: any = { apiKey };
         if (replitApiKey && replitBaseUrl) {
             options.httpOptions = {
-                apiVersion: "",
-                baseUrl: `${window.location.origin}/__replit_sdk/proxy/1106`
+                apiVersion: "v1beta",
+                baseUrl: replitBaseUrl
             };
         } else {
             if (!apiKey) {
