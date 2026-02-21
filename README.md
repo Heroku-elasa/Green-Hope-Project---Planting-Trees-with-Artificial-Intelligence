@@ -18,3 +18,4 @@ View your app in AI Studio: https://ai.studio/apps/drive/1sWIJT24QCVbXQ4MEWxcqEW
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+# Arman Law Firm AI Content Generator - Restored Working Version
