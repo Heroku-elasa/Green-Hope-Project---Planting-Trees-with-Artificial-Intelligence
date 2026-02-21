@@ -12,18 +12,17 @@ function getAI(): GoogleGenAI {
         
         const apiKey = replitApiKey || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
         
-        if (!apiKey) {
-            throw new Error('Please set the GEMINI_API_KEY environment variable or use Replit AI Integration.');
-        }
-
         const options: any = { apiKey };
-        if (replitBaseUrl) {
+        if (replitApiKey && replitBaseUrl) {
             // Use an absolute URL for the Replit AI Integration proxy
             options.httpOptions = {
                 apiVersion: "",
                 baseUrl: `${window.location.origin}/__replit_sdk/proxy/1106`
             };
         } else {
+            if (!apiKey) {
+                throw new Error('Please set the GEMINI_API_KEY environment variable or use Replit AI Integration.');
+            }
             options.httpOptions = {
                 apiVersion: "v1beta"
             };
@@ -126,16 +125,35 @@ export const getChatResponseWithFollowups = async (
 
 
 export const generateReport = async (topic: string, description: string, reportType: string): Promise<GroundedResult> => {
-    const prompt = `
-        Generate a comprehensive report of type "${reportType}".
-        Topic: ${topic}
-        Description: ${description}
+    let prompt = "";
+    if (reportType === 'tree_planting') {
+        prompt = `
+            Generate a detailed "Tree Planting and Reforestation Strategy".
+            Topic: ${topic}
+            Location/Description: ${description}
 
-        The report should be well-structured, detailed, and formatted in Markdown.
-        Use Google Search to find up-to-date and relevant information for the report, including current reforestation trends, suitable native species for any mentioned regions, and potential funding sources.
-        Include sections like Introduction, Site Analysis, Species Selection, Implementation Plan, Budget, and Impact Projection.
-        List all web sources used.
-    `;
+            The report should include:
+            1. Site Suitability Analysis: Evaluating the location for specific tree species.
+            2. Species Selection: Recommended native or climate-resilient trees with scientific names.
+            3. Planting Technique: Step-by-step guide for successful sapling establishment.
+            4. Long-term Maintenance: Care instructions, irrigation needs, and protection from pests.
+            5. Ecosystem Impact: Projected biodiversity and soil health benefits.
+            
+            Use Google Search to find specific regional data, native species lists, and best practices for the mentioned area.
+            Format in Markdown. List all web sources used.
+        `;
+    } else {
+        prompt = `
+            Generate a comprehensive report of type "${reportType}".
+            Topic: ${topic}
+            Description: ${description}
+
+            The report should be well-structured, detailed, and formatted in Markdown.
+            Use Google Search to find up-to-date and relevant information for the report, including current reforestation trends, suitable native species for any mentioned regions, and potential funding sources.
+            Include sections like Introduction, Site Analysis, Species Selection, Implementation Plan, Budget, and Impact Projection.
+            List all web sources used.
+        `;
+    }
 
     // Use ai.models.generateContent
     const response = await ai.models.generateContent({
