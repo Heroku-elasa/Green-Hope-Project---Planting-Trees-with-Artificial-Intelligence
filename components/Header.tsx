@@ -30,6 +30,7 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
     { page: 'projects', labelKey: 'nav.projects' },
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
+    { page: 'api-test', labelKey: 'nav.apiTest' },
   ];
   
   const handleLanguageChange = (lang: 'en' | 'fa') => {
