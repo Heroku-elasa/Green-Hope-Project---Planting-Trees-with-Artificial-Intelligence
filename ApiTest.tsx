@@ -1,139 +1,450 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useLanguage } from './types';
 
-interface TestResult {
-  service: string;
-  status: '✅' | '❌';
-  latency?: number;
-  error?: string;
-  model?: string;
+interface AIProvider {
+  id: string;
+  name: string;
+  enabled: boolean;
+  priority: number;
+  model: string;
+  endpoint: string;
+  keyConfigured?: boolean;
+  limits: {
+    requestsPerMinute: number;
+    requestsPerDay: number;
+  };
+  usage: {
+    requestsToday: number;
+    tokensToday: number;
+    errorsToday: number;
+  };
 }
 
+interface AILog {
+  id: number;
+  timestamp: string;
+  provider: string;
+  functionName: string;
+  status: 'success' | 'error' | 'fallback';
+  duration: number;
+  tokens: number;
+  error?: string;
+}
+
+const DEFAULT_PROVIDERS: AIProvider[] = [
+  {
+    id: 'portkey',
+    name: 'Portkey',
+    enabled: true,
+    priority: 1,
+    model: 'gpt-4o',
+    endpoint: 'api.portkey.ai',
+    keyConfigured: true,
+    limits: { requestsPerMinute: 60, requestsPerDay: 1000 },
+    usage: { requestsToday: 0, tokensToday: 0, errorsToday: 0 }
+  },
+  {
+    id: 'poyo',
+    name: 'Poyo AI',
+    enabled: true,
+    priority: 2,
+    model: 'gemini-1.5-flash',
+    endpoint: 'poyo.ai',
+    keyConfigured: true,
+    limits: { requestsPerMinute: 20, requestsPerDay: 100 },
+    usage: { requestsToday: 0, tokensToday: 0, errorsToday: 0 }
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    enabled: true,
+    priority: 3,
+    model: 'google/gemini-2.0-flash-001',
+    endpoint: 'openrouter.ai',
+    keyConfigured: true,
+    limits: { requestsPerMinute: 20, requestsPerDay: 50 },
+    usage: { requestsToday: 0, tokensToday: 0, errorsToday: 0 }
+  }
+];
+
 const ApiTest: React.FC = () => {
-  const [results, setResults] = useState<TestResult[]>([]);
+  const { language, t } = useLanguage();
+  const isRtl = language === 'fa';
+  
+  const [activeTab, setActiveTab] = useState<'providers' | 'usage' | 'logs' | 'debug' | 'settings'>('providers');
+  const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
+  const [logs, setLogs] = useState<AILog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{provider: string; success: boolean; duration?: number; response?: string; error?: string} | null>(null);
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [testPrompt, setTestPrompt] = useState('سلام، چطوری؟');
+  
+  const [apiKeys, setApiKeys] = useState({
+    portkey: 'ST4fIU5r6s6JvLGE/ad2F+8CCCrU',
+    poyo1: 'sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79',
+    poyo2: 'sk-NdIelDiC8dgJXP-uSy-4_03BQnGaCX1xdtVYZXFa9Z1b4FqXF3oProuUg9huz_',
+    openrouter1: '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',
+    openrouter2: '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'
+  });
 
-  const runTests = async () => {
-    setLoading(true);
-    const newResults: TestResult[] = [];
-
-    // PoYo AI Test
-    try {
-      const start = Date.now();
-      const apiKey = import.meta.env.VITE_POYO_API_KEY || '';
-      console.log('Testing PoYo with key:', apiKey.substring(0, 8) + '...');
-      await axios.post('https://api.poyo.ai/v1/chat/completions', {
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: 'سلام' }],
-        max_tokens: 10
-      }, {
-        headers: { 
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
-      newResults.push({ service: 'PoYo AI', status: '✅', latency: Date.now() - start, model: 'gpt-4o-mini' });
-    } catch (e: any) {
-      console.error('PoYo Error:', e.response?.data || e.message);
-      newResults.push({ service: 'PoYo AI', status: '❌', error: e.response?.data?.error?.message || e.message });
-    }
-
-    // OpenRouter Test
-    try {
-      const start = Date.now();
-      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || '';
-      console.log('Testing OpenRouter with key:', apiKey.substring(0, 8) + '...');
-      await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemini-2.0-flash-exp:free',
-        messages: [{ role: 'user', content: 'سلام' }],
-        max_tokens: 10
-      }, {
-        headers: { 
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.origin,
-          'X-Title': 'Green Hope Project'
-        },
-        timeout: 10000
-      });
-      newResults.push({ service: 'OpenRouter', status: '✅', latency: Date.now() - start, model: 'gemini-2.0-flash' });
-    } catch (e: any) {
-      console.error('OpenRouter Error:', e.response?.data || e.message);
-      newResults.push({ service: 'OpenRouter', status: '❌', error: e.response?.data?.error?.message || e.message });
-    }
-
-    // Portkey Test
-    try {
-      const start = Date.now();
-      const apiKey = import.meta.env.VITE_PORTKEY_API_KEY || '';
-      console.log('Testing Portkey with key:', apiKey.substring(0, 8) + '...');
-      await axios.post('https://api.portkey.ai/v1/chat/completions', {
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: 'سلام' }],
-        max_tokens: 10
-      }, {
-        headers: {
-          'x-portkey-api-key': apiKey,
-          'x-portkey-provider': 'openai',
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      });
-      newResults.push({ service: 'Portkey AI', status: '✅', latency: Date.now() - start, model: 'gpt-4o-mini' });
-    } catch (e: any) {
-      console.error('Portkey Error:', e.response?.data || e.message);
-      newResults.push({ service: 'Portkey AI', status: '❌', error: e.response?.data?.error?.message || e.message });
-    }
-
-    setResults(newResults);
-    setLoading(false);
+  const addLog = (provider: string, functionName: string, status: 'success' | 'error', duration: number, error?: string) => {
+    const newLog: AILog = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      provider,
+      functionName,
+      status,
+      duration,
+      tokens: 0,
+      error
+    };
+    setLogs(prev => [newLog, ...prev]);
   };
 
-  return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-green-800">API Connectivity Test</h1>
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <p className="mb-4 text-gray-600">Testing PoYo, OpenRouter, and Portkey integrations.</p>
-        <button 
-          onClick={runTests} 
-          disabled={loading}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded transition-colors disabled:opacity-50"
-        >
-          {loading ? 'Testing...' : 'Run All Tests'}
-        </button>
-      </div>
+  const testProvider = async (id: string) => {
+    setTestingProvider(id);
+    setTestResult(null);
+    const start = Date.now();
+    
+    try {
+      let url = '';
+      let headers: any = { 'Content-Type': 'application/json' };
+      let body: any = {};
 
-      {results.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-lg shadow-md">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latency</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {results.map((res, idx) => (
-                <tr key={idx}>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{res.service}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-2xl">{res.status}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{res.latency ? `${res.latency}ms` : '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {res.error ? <span className="text-red-500">{res.error}</span> : `Model: ${res.model}`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      if (id === 'openrouter') {
+        url = 'https://openrouter.ai/api/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${apiKeys.openrouter1}`;
+        headers['HTTP-Referer'] = window.location.origin;
+        headers['X-Title'] = 'Arman Law Firm Test';
+        body = {
+          model: 'google/gemini-2.0-flash-001',
+          messages: [{ role: 'user', content: testPrompt }]
+        };
+      } else if (id === 'poyo') {
+        url = 'https://api.poyo.ai/v1/chat/completions';
+        headers['Authorization'] = `Bearer ${apiKeys.poyo1}`;
+        body = {
+          model: 'gemini-1.5-flash',
+          messages: [{ role: 'user', content: testPrompt }]
+        };
+      } else if (id === 'portkey') {
+        url = 'https://api.portkey.ai/v1/chat/completions';
+        headers['x-portkey-api-key'] = apiKeys.portkey;
+        headers['x-portkey-provider'] = 'openai';
+        body = {
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: testPrompt }]
+        };
+      }
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      const duration = Date.now() - start;
+
+      if (res.ok) {
+        const responseText = data.choices?.[0]?.message?.content || JSON.stringify(data);
+        setTestResult({ provider: id, success: true, duration, response: responseText });
+        addLog(id, 'test', 'success', duration);
+      } else {
+        throw new Error(data.error?.message || res.statusText);
+      }
+    } catch (error: any) {
+      const duration = Date.now() - start;
+      setTestResult({ provider: id, success: false, error: error.message });
+      addLog(id, 'test', 'error', duration, error.message);
+    } finally {
+      setTestingProvider(null);
+    }
+  };
+
+  const saveApiKeys = () => {
+    localStorage.setItem('test-api-keys', JSON.stringify(apiKeys));
+    alert(isRtl ? 'کلیدها ذخیره شدند' : 'Keys saved');
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+  };
+
+  const tabs = [
+    { id: 'providers', label: isRtl ? 'ارائه‌دهندگان' : 'Providers' },
+    { id: 'usage', label: isRtl ? 'مصرف' : 'Usage' },
+    { id: 'logs', label: isRtl ? 'گزارشات' : 'Logs' },
+    { id: 'settings', label: isRtl ? 'تنظیمات' : 'Settings' }
+  ];
+
+  return (
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 ${isRtl ? 'rtl' : 'ltr'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              {isRtl ? 'تست API های هوش مصنوعی' : 'AI API Testing'}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {isRtl ? 'تست و مانیتورینگ کلیدهای API ارائه شده' : 'Test and monitor the provided API keys'}
+            </p>
+          </div>
         </div>
-      )}
-      
-      <div className="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
-        <p className="font-bold">Note on Environment Variables:</p>
-        <p>Ensure <code>VITE_POYO_API_KEY</code>, <code>VITE_OPENROUTER_API_KEY</code>, and <code>VITE_PORTKEY_API_KEY</code> are set in your secrets. Vite requires the <code>VITE_</code> prefix for frontend access.</p>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex overflow-x-auto">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {activeTab === 'providers' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 mb-6">
+                  <label className="block text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
+                    {isRtl ? 'پرامپت تست:' : 'Test Prompt:'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={testPrompt} 
+                      onChange={(e) => setTestPrompt(e.target.value)}
+                      className="flex-grow p-2 rounded border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {providers.map((provider) => (
+                    <div
+                      key={provider.id}
+                      className="bg-gray-50 dark:bg-gray-700 rounded-xl p-5 border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-white text-lg">{provider.name}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{provider.endpoint}</p>
+                        </div>
+                        <span className="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded font-bold uppercase">
+                          {isRtl ? 'آماده' : 'Ready'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2 mb-6">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">{isRtl ? 'مدل پیش‌فرض:' : 'Default Model:'}</span>
+                          <span className="text-gray-900 dark:text-gray-300 font-mono">{provider.model}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => testProvider(provider.id)}
+                        disabled={testingProvider === provider.id}
+                        className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all font-bold"
+                      >
+                        {testingProvider === provider.id ? (isRtl ? 'در حال تست...' : 'Testing...') : (isRtl ? 'اجرای تست' : 'Run Test')}
+                      </button>
+
+                      {testResult?.provider === provider.id && (
+                        <div className={`mt-4 p-3 rounded-lg text-sm ${
+                          testResult.success 
+                            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+                            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                        }`}>
+                          <div className="flex justify-between mb-1">
+                            <span className={testResult.success ? 'text-green-700 dark:text-green-400 font-bold' : 'text-red-700 dark:text-red-400 font-bold'}>
+                              {testResult.success ? (isRtl ? '✓ موفق' : '✓ Success') : (isRtl ? '✗ خطا' : '✗ Error')}
+                            </span>
+                            <span className="text-gray-500 text-xs">{testResult.duration}ms</span>
+                          </div>
+                          {testResult.success ? (
+                            <p className="text-gray-700 dark:text-gray-300 line-clamp-3 italic">"{testResult.response}"</p>
+                          ) : (
+                            <p className="text-red-600 dark:text-red-400 text-xs">{testResult.error}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'usage' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                  {isRtl ? 'آمار مصرف محلی' : 'Local Usage Stats'}
+                </h2>
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 text-sm">
+                  {isRtl ? 'این آمار فقط برای نشست فعلی است.' : 'These stats are for the current session only.'}
+                </div>
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+                      <th className="pb-3 font-medium">{isRtl ? 'ارائه‌دهنده' : 'Provider'}</th>
+                      <th className="pb-3 font-medium">{isRtl ? 'تعداد تست' : 'Tests Run'}</th>
+                      <th className="pb-3 font-medium">{isRtl ? 'میانگین زمان' : 'Avg Latency'}</th>
+                      <th className="pb-3 font-medium">{isRtl ? 'خطاها' : 'Errors'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {providers.map(p => {
+                      const providerLogs = logs.filter(l => l.provider === p.id);
+                      const successLogs = providerLogs.filter(l => l.status === 'success');
+                      const avgLatency = successLogs.length > 0 
+                        ? Math.round(successLogs.reduce((acc, curr) => acc + curr.duration, 0) / successLogs.length)
+                        : 0;
+                      return (
+                        <tr key={p.id} className="border-b dark:border-gray-700">
+                          <td className="py-4 font-medium text-gray-900 dark:text-white">{p.name}</td>
+                          <td className="py-4 text-gray-700 dark:text-gray-300">{providerLogs.length}</td>
+                          <td className="py-4 text-gray-700 dark:text-gray-300">{avgLatency}ms</td>
+                          <td className="py-4 text-red-500">{providerLogs.filter(l => l.status === 'error').length}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {activeTab === 'logs' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {isRtl ? 'گزارشات تست' : 'Test Logs'}
+                  </h2>
+                  <button
+                    onClick={clearLogs}
+                    className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    {isRtl ? 'پاک کردن' : 'Clear'}
+                  </button>
+                </div>
+
+                {logs.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    {isRtl ? 'هیچ گزارشی یافت نشد' : 'No logs found'}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+                          <th className="pb-3 font-medium">{isRtl ? 'زمان' : 'Time'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'ارائه‌دهنده' : 'Provider'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'وضعیت' : 'Status'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'زمان پاسخ' : 'Duration'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'خطا' : 'Error'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logs.map(log => (
+                          <tr key={log.id} className="border-b dark:border-gray-700">
+                            <td className="py-3 text-gray-600 dark:text-gray-400">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                            <td className="py-3 text-gray-700 dark:text-gray-300 font-bold">{log.provider}</td>
+                            <td className="py-3">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {log.status}
+                              </span>
+                            </td>
+                            <td className="py-3 text-gray-600 dark:text-gray-400">{log.duration}ms</td>
+                            <td className="py-3 text-red-500 text-xs max-w-xs truncate">{log.error || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-6 max-w-2xl">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                  {isRtl ? 'کلیدهای API ارائه شده' : 'Provided API Keys'}
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Portkey API Key</label>
+                    <input
+                      type="text"
+                      value={apiKeys.portkey}
+                      onChange={(e) => setApiKeys({ ...apiKeys, portkey: e.target.value })}
+                      className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Poyo Key 1</label>
+                      <input
+                        type="text"
+                        value={apiKeys.poyo1}
+                        onChange={(e) => setApiKeys({ ...apiKeys, poyo1: e.target.value })}
+                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Poyo Key 2</label>
+                      <input
+                        type="text"
+                        value={apiKeys.poyo2}
+                        onChange={(e) => setApiKeys({ ...apiKeys, poyo2: e.target.value })}
+                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OpenRouter Key 1</label>
+                      <input
+                        type="text"
+                        value={apiKeys.openrouter1}
+                        onChange={(e) => setApiKeys({ ...apiKeys, openrouter1: e.target.value })}
+                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OpenRouter Key 2</label>
+                      <input
+                        type="text"
+                        value={apiKeys.openrouter2}
+                        onChange={(e) => setApiKeys({ ...apiKeys, openrouter2: e.target.value })}
+                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={saveApiKeys}
+                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
+                  >
+                    {isRtl ? 'ذخیره کلیدها' : 'Save Keys'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
