@@ -20,53 +20,69 @@ const ApiTest: React.FC = () => {
     // PoYo AI Test
     try {
       const start = Date.now();
+      const apiKey = import.meta.env.VITE_POYO_API_KEY || '';
+      console.log('Testing PoYo with key:', apiKey.substring(0, 8) + '...');
       await axios.post('https://api.poyo.ai/v1/chat/completions', {
         model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: 'test' }],
-        max_tokens: 5
+        messages: [{ role: 'user', content: 'سلام' }],
+        max_tokens: 10
       }, {
-        headers: { 'Authorization': `Bearer ${import.meta.env.VITE_POYO_API_KEY || ''}` }
+        headers: { 
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
       });
       newResults.push({ service: 'PoYo AI', status: '✅', latency: Date.now() - start, model: 'gpt-4o-mini' });
     } catch (e: any) {
+      console.error('PoYo Error:', e.response?.data || e.message);
       newResults.push({ service: 'PoYo AI', status: '❌', error: e.response?.data?.error?.message || e.message });
     }
 
     // OpenRouter Test
     try {
       const start = Date.now();
+      const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || '';
+      console.log('Testing OpenRouter with key:', apiKey.substring(0, 8) + '...');
       await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: 'google/gemini-2.0-flash-exp:free',
-        messages: [{ role: 'user', content: 'test' }],
-        max_tokens: 5
+        messages: [{ role: 'user', content: 'سلام' }],
+        max_tokens: 10
       }, {
         headers: { 
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY || ''}`,
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
           'HTTP-Referer': window.location.origin,
           'X-Title': 'Green Hope Project'
-        }
+        },
+        timeout: 10000
       });
       newResults.push({ service: 'OpenRouter', status: '✅', latency: Date.now() - start, model: 'gemini-2.0-flash' });
     } catch (e: any) {
+      console.error('OpenRouter Error:', e.response?.data || e.message);
       newResults.push({ service: 'OpenRouter', status: '❌', error: e.response?.data?.error?.message || e.message });
     }
 
     // Portkey Test
     try {
       const start = Date.now();
+      const apiKey = import.meta.env.VITE_PORTKEY_API_KEY || '';
+      console.log('Testing Portkey with key:', apiKey.substring(0, 8) + '...');
       await axios.post('https://api.portkey.ai/v1/chat/completions', {
         model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: 'test' }],
-        max_tokens: 5
+        messages: [{ role: 'user', content: 'سلام' }],
+        max_tokens: 10
       }, {
         headers: {
-          'x-portkey-api-key': import.meta.env.VITE_PORTKEY_API_KEY || '',
+          'x-portkey-api-key': apiKey,
           'x-portkey-provider': 'openai',
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 10000
       });
       newResults.push({ service: 'Portkey AI', status: '✅', latency: Date.now() - start, model: 'gpt-4o-mini' });
     } catch (e: any) {
+      console.error('Portkey Error:', e.response?.data || e.message);
       newResults.push({ service: 'Portkey AI', status: '❌', error: e.response?.data?.error?.message || e.message });
     }
 
