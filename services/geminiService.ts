@@ -1,8 +1,22 @@
 import { GoogleGenAI, Type, GenerateContentResponse, Content } from "@google/genai";
 import { Grant, GrantSummary, VideoScene } from "../types";
 
-// Always use new GoogleGenAI({apiKey: process.env.API_KEY});
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+let _ai: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI {
+    if (!_ai) {
+        const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+        if (!apiKey) {
+            throw new Error('Please set the GEMINI_API_KEY environment variable to use AI features.');
+        }
+        _ai = new GoogleGenAI({ apiKey });
+    }
+    return _ai;
+}
+const ai = new Proxy({} as GoogleGenAI, {
+    get(_target, prop) {
+        return (getAI() as any)[prop];
+    }
+});
 
 export interface GrantResult {
     text: string;
