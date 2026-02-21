@@ -254,9 +254,9 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
             });
             mapInstanceRef.current = map;
 
-            const tileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                maxZoom: 18,
+            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19,
             });
 
             tileLayer.on('loading', () => setIsMapLoading(true));
@@ -853,7 +853,7 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
                             onClick={async () => {
                                 setLoadingAnalysisFor(treeId);
                                 try {
-                                    const res = await geminiService.analyzeTreeEconomicBenefits(item, language);
+                                    const res = await geminiService.analyzeTreeEconomicBenefits(item.commonName, item.scientificName, coords!, language);
                                     setEconomicAnalysis(prev => ({ ...prev, [treeId]: res }));
                                 } catch (e) {
                                     setAnalysisError(prev => ({ ...prev, [treeId]: handleApiError(e) }));
