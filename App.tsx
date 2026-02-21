@@ -557,11 +557,11 @@ const App: React.FC = () => {
 
     const renderPage = () => {
         switch (page) {
+            case 'api-test': return <ApiTest />;
             case 'home': return <HomePage setPage={setPage} />;
             case 'projects': return <ProjectsPage />;
             case 'team': return <TeamPage />;
             case 'docs': return <FunctionDocsPage />;
-            case 'api-test': return <ApiTest />;
             case 'generator': return <ReportGenerator onGenerate={handleGenerateReport} generatedReport={generatedReport} isLoading={isLoading} error={error} isComplete={isReportComplete} topic={reportTopic} setTopic={setReportTopic} description={reportDescription} setDescription={setReportDescription} reportType={reportType} setReportType={setReportType} isQuotaExhausted={isQuotaExhausted} />;
             case 'grant': return (<>
                 <GrantFinder onFindGrants={handleFindGrants} onFindGrantsWithGrounding={handleFindGrantsWithGrounding} isLoading={isLoading} error={error} grants={foundGrants} groundedResult={groundedGrants} onAnalyzeGrant={handleAnalyzeGrant} keywords={grantKeywords} setKeywords={setGrantKeywords} />

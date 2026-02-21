@@ -183,7 +183,8 @@ const ApiTest: React.FC = () => {
         body = {
           model: model,
           messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 150
+          max_tokens: 150,
+          replit_integration: 'true' // Add indicator for tracking
         };
       } else if (id === 'poyo') {
         url = 'https://api.poyo.ai/v1/chat/completions';

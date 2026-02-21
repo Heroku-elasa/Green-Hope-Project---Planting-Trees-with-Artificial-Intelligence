@@ -13,7 +13,7 @@ function getAI(): GoogleGenAI {
         const replitApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
         const replitBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
         
-        const apiKey = replitApiKey || process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+        const apiKey = replitApiKey || process.env.AI_INTEGRATIONS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
         
         const options: any = { apiKey };
         if (replitApiKey && replitBaseUrl) {
