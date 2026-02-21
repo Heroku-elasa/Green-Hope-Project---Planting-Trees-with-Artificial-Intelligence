@@ -559,6 +559,23 @@ export const askGoogleBabaAboutImage = async (image: {data: string, mimeType: st
 };
 
 export const generateSceneVideo = async (description: string): Promise<string[]> => {
+    if (poyo) {
+        try {
+            const result = await poyo.generateVideo('veo-3.1', description, { duration: 6 });
+            if (result.task_id) {
+                let status = await poyo.getTaskStatus(result.task_id);
+                let attempts = 0;
+                while (status.status === 'processing' && attempts < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    status = await poyo.getTaskStatus(result.task_id);
+                    attempts++;
+                }
+                if (status.result?.url) return [status.result.url];
+            }
+        } catch (e) {
+            console.error("PoYo Video Error, falling back to placeholder:", e);
+        }
+    }
     // This is a placeholder as video generation is a long-running operation.
     // In a real app, this would initiate an operation and poll for results.
     console.log("Generating video for:", description);
@@ -568,6 +585,14 @@ export const generateSceneVideo = async (description: string): Promise<string[]>
 };
 
 export const generateSceneImage = async (description: string): Promise<string> => {
+    if (poyo) {
+        try {
+            const result = await poyo.generateImage('flux-2', description);
+            if (result.data?.[0]?.url) return result.data[0].url;
+        } catch (e) {
+            console.error("PoYo Image Error, falling back to Gemini:", e);
+        }
+    }
     try {
         const ai = await getAI();
         const response = await ai.models.generateImages({
@@ -589,6 +614,15 @@ export const generateSceneImage = async (description: string): Promise<string> =
 };
 
 export const generateBlogImage = async (title: string): Promise<string> => {
+    if (poyo) {
+        try {
+            const prompt = `A photorealistic, hopeful, and inspiring image for a blog post titled: '${title}'. The image should be suitable for an environmental organization focused on reforestation. The main subject should be clear and visually appealing. Avoid text overlays. Aspect ratio 16:9.`;
+            const result = await poyo.generateImage('flux-2', prompt);
+            if (result.data?.[0]?.url) return result.data[0].url;
+        } catch (e) {
+            console.error("PoYo Blog Image Error, falling back to Gemini:", e);
+        }
+    }
     try {
         const ai = await getAI();
         const prompt = `A photorealistic, hopeful, and inspiring image for a blog post titled: '${title}'. The image should be suitable for an environmental organization focused on reforestation. The main subject should be clear and visually appealing. Avoid text overlays. Aspect ratio 16:9.`;
@@ -611,6 +645,7 @@ export const generateBlogImage = async (title: string): Promise<string> => {
 };
 
 export const editImage = async (base64ImageData: string, mimeType: string, prompt: string): Promise<string> => {
+    // Note: PoYo edit image might have a different API, keeping Gemini for now as it's specialized.
     const imagePart = {
         inlineData: {
             data: base64ImageData,
@@ -643,6 +678,14 @@ export const editImage = async (base64ImageData: string, mimeType: string, promp
 
 
 export const generateMusicDescription = async (prompt: string): Promise<string> => {
+    if (poyo) {
+        try {
+            const result = await poyo.generateMusic(prompt, { duration: 30 });
+            if (result.url) return result.url;
+        } catch (e) {
+            console.error("PoYo Music Error, falling back to Gemini:", e);
+        }
+    }
      const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: `Describe a suitable background music track for a video with the following theme: "${prompt}". Describe the mood, instruments, and tempo.`,
