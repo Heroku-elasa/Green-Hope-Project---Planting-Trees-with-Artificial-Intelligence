@@ -7,6 +7,11 @@ const poyo = process.env.POYO_API_KEY ? new PoYoClient({ apiKey: process.env.POY
 const OPENROUTER_API_KEY = "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";
 const OPENROUTER_API_KEY_2 = "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";
 const PORTKEY_API_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU";
+
+// Model constants for better reliability
+const RELIABLE_FREE_MODEL = "google/gemini-2.0-pro-exp-02-05:free";
+const FALLBACK_FREE_MODEL = "google/gemini-2.0-flash-exp:free";
+const DEEPSEEK_FREE_MODEL = "deepseek/deepseek-r1:free";
 const NEW_POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79";
 
 const OPENROUTER_MODELS = [
@@ -91,29 +96,63 @@ export const findPlantingAreas = async (polygon: { lat: number, lng: number }[],
         } catch (geminiError) {
             console.warn("Gemini failed, trying OpenRouter fallback...", geminiError);
             
-            // OpenRouter Fallback
-            const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                    "HTTP-Referer": "https://replit.com",
-                    "X-Title": "Green Hope Project"
-                },
-                body: JSON.stringify({
-                    model: "google/gemini-2.0-pro-exp-02-05:free",
-                    messages: [
-                        { role: "system", content: systemInstruction },
-                        { role: "user", content: contents }
-                    ],
-                    response_format: { type: "json_object" }
-                })
-            });
-            
-            const orData = await orResponse.json();
-            const content = orData.choices[0].message.content;
-            const parsed = JSON.parse(content);
-            return parsed.locations || parsed.points || (Array.isArray(parsed) ? parsed : []);
+            // OpenRouter Fallback with Multi-key and Multi-model support
+            const orKeys = [OPENROUTER_API_KEY, OPENROUTER_API_KEY_2].filter(k => k);
+            const orModels = [RELIABLE_FREE_MODEL, FALLBACK_FREE_MODEL, DEEPSEEK_FREE_MODEL];
+            let orSuccess = false;
+            let orParsed = null;
+
+            for (const key of orKeys) {
+                if (orSuccess) break;
+                for (const model of orModels) {
+                    try {
+                        const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${key}`,
+                                "HTTP-Referer": "https://replit.com",
+                                "X-Title": "Green Hope Project"
+                            },
+                            body: JSON.stringify({
+                                model: model,
+                                messages: [
+                                    { role: "system", content: systemInstruction },
+                                    { role: "user", content: contents }
+                                ],
+                                response_format: { type: "json_object" }
+                            })
+                        });
+                        
+                        const orData = await orResponse.json();
+                        if (orResponse.ok && orData.choices?.[0]?.message?.content) {
+                            const content = orData.choices[0].message.content;
+                            orParsed = JSON.parse(content);
+                            orSuccess = true;
+                            
+                            // Log success to DB
+                            if (typeof window !== 'undefined') {
+                                fetch('/api/db/query', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        query: 'INSERT INTO api_test_results (api_name, model, status, latency, response, tested_at) VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT (api_name, model) DO UPDATE SET status = EXCLUDED.status, latency = EXCLUDED.latency, response = EXCLUDED.response, tested_at = NOW()',
+                                        params: ['OpenRouter', model, 'WORKS', 0, 'Auto-verified during fallback']
+                                    })
+                                }).catch(() => {});
+                            }
+                            break;
+                        }
+                    } catch (e) {
+                        console.error(`OpenRouter trial failed: Key=${key.substring(0,10)}..., Model=${model}`, e);
+                    }
+                }
+            }
+
+            if (orSuccess && orParsed) {
+                return orParsed.locations || orParsed.points || (Array.isArray(orParsed) ? orParsed : []);
+            }
+            throw new Error("All OpenRouter fallbacks failed.");
         }
     } catch (error) {
         console.error("Error in findPlantingAreas:", error);

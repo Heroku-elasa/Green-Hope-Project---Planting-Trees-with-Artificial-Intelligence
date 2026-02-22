@@ -96,6 +96,25 @@ const ApiTest: React.FC = () => {
   const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
   const [logs, setLogs] = useState<AILog[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savedResults, setSavedResults] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchSavedResults();
+  }, []);
+
+  const fetchSavedResults = async () => {
+    try {
+      const res = await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'SELECT * FROM api_test_results ORDER BY status DESC, latency ASC, tested_at DESC LIMIT 50' })
+      });
+      const data = await res.json();
+      if (data.rows) setSavedResults(data.rows);
+    } catch (err) {
+      console.error('Failed to fetch results:', err);
+    }
+  };
   const [testResult, setTestResult] = useState<{
     provider: string;
     success: boolean;
@@ -198,15 +217,54 @@ const ApiTest: React.FC = () => {
 
       if (id === 'openrouter') {
         url = 'https://openrouter.ai/api/v1/chat/completions';
-        apiKey = apiKeys.openrouter1;
-        headers['Authorization'] = `Bearer ${apiKey}`;
-        headers['HTTP-Referer'] = window.location.origin;
-        headers['X-Title'] = 'Arman Law Firm';
-        body = {
-          model: model,
-          messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 150
-        };
+        const keys = [apiKeys.openrouter1, apiKeys.openrouter2].filter(k => k);
+        let success = false;
+        let lastErr = '';
+        
+        for (const key of keys) {
+          try {
+            headers['Authorization'] = `Bearer ${key}`;
+            const currentBody = { 
+              model: model,
+              messages: [{ role: 'user', content: testPrompt }],
+              max_tokens: 150
+            };
+            const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(currentBody) });
+            const data = await res.json();
+            
+            if (res.ok && data.choices?.[0]?.message?.content) {
+              const duration = Date.now() - start;
+              const responseText = data.choices[0].message.content;
+              setTestResult({ provider: id, success: true, duration, response: responseText, model });
+              updateProviderStatus(id, 'success', undefined, duration);
+              addLog(id, model, 'success', duration, undefined, responseText);
+              
+              // Save to "Working APIs" in DB
+              try {
+                await fetch('/api/db/query', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    query: 'INSERT INTO api_test_results (api_name, model, status, latency, response, tested_at) VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT (api_name, model) DO UPDATE SET status = EXCLUDED.status, latency = EXCLUDED.latency, response = EXCLUDED.response, tested_at = NOW()',
+                    params: [id, model, 'WORKS', duration, responseText]
+                  })
+                });
+                fetchSavedResults();
+              } catch (dbErr) {
+                console.error("DB Save failed:", dbErr);
+              }
+              
+              success = true;
+              break;
+            } else {
+              lastErr = data.error?.message || res.statusText || 'User not found or credit exhausted';
+            }
+          } catch (e: any) {
+            lastErr = e.message;
+          }
+        }
+        if (!success) throw new Error(lastErr || 'All keys failed');
+        return;
       } else if (id === 'poyo') {
         url = 'https://api.poyo.ai/v1/chat/completions';
         apiKey = apiKeys.poyo1;
@@ -255,6 +313,21 @@ const ApiTest: React.FC = () => {
         });
         updateProviderStatus(id, 'success', undefined, duration);
         addLog(id, model, 'success', duration, undefined, responseText);
+        
+        // Save success to DB for Poyo/Portkey
+        try {
+          await fetch('/api/db/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: 'INSERT INTO api_test_results (api_name, model, status, latency, response, tested_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (api_name, model) DO UPDATE SET status = EXCLUDED.status, latency = EXCLUDED.latency, response = EXCLUDED.response, tested_at = NOW()',
+              params: [id, model, 'WORKS', duration, responseText]
+            })
+          });
+          fetchSavedResults();
+        } catch (dbErr) {
+          console.error("DB Save failed:", dbErr);
+        }
       } else {
         const errorMsg = data.error?.message || data.error?.code || res.statusText || 'Unknown error';
         throw new Error(errorMsg);
@@ -405,6 +478,41 @@ const ApiTest: React.FC = () => {
                     >
                       {loading ? '⏳' : '🚀'} {isRtl ? 'تست همه' : 'Test All'}
                     </button>
+                  </div>
+                </div>
+
+                {/* Working APIs Section */}
+                <div className="bg-green-50 dark:bg-green-900/10 p-6 rounded-xl border-2 border-green-200 dark:border-green-800 shadow-sm mb-8">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-green-800 dark:text-green-300 flex items-center gap-2">
+                      ✨ {isRtl ? 'سرویس‌های عملیاتی و تست شده' : 'Verified Working Services'}
+                    </h3>
+                    <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-bold">
+                      {savedResults.filter(r => r.status === 'WORKS').length} {isRtl ? 'مدل فعال' : 'Active Models'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {savedResults.filter(r => r.status === 'WORKS').map((r, i) => (
+                      <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-green-100 dark:border-green-900 flex flex-col gap-2 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-gray-900 dark:text-white">{r.api_name}</span>
+                          <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase font-mono">{r.latency}ms</span>
+                        </div>
+                        <div className="text-xs text-gray-500 font-mono truncate bg-gray-50 dark:bg-gray-700/50 p-1.5 rounded">
+                          {r.model}
+                        </div>
+                        <div className="text-[10px] text-gray-400 italic">
+                          {new Date(r.tested_at).toLocaleString(isRtl ? 'fa-IR' : 'en-US')}
+                        </div>
+                      </div>
+                    ))}
+                    {savedResults.filter(r => r.status === 'WORKS').length === 0 && (
+                      <div className="col-span-full text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                        <div className="text-3xl mb-2">🔍</div>
+                        <p>{isRtl ? 'هنوز هیچ مدلی با موفقیت تست نشده است.' : 'No models have been verified yet.'}</p>
+                        <p className="text-xs mt-1">{isRtl ? 'برای شروع، دکمه "تست همه" را بزنید.' : 'Click "Test All" to begin verification.'}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
