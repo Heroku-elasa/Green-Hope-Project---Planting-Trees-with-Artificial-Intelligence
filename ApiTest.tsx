@@ -123,13 +123,24 @@ const ApiTest: React.FC = () => {
   ]);
 
   useEffect(() => {
+    // Sync with localStorage on load
     const savedKeys = localStorage.getItem('arman-api-keys');
     if (savedKeys) {
       try {
-        setApiKeys(JSON.parse(savedKeys));
+        const parsed = JSON.parse(savedKeys);
+        setApiKeys(prev => ({ ...prev, ...parsed }));
       } catch (e) {
         console.error('Error loading saved keys:', e);
       }
+    } else {
+      // If no saved keys, save the defaults to ensure consistency
+      localStorage.setItem('arman-api-keys', JSON.stringify({
+        portkey: 'ST4fIU5r6s6JvLGE/ad2F+8CCCrU',
+        poyo1: 'sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79',
+        poyo2: '',
+        openrouter1: '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',
+        openrouter2: ''
+      }));
     }
   }, []);
 
@@ -189,8 +200,7 @@ const ApiTest: React.FC = () => {
         body = {
           model: model,
           messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 150,
-          replit_integration: 'true' // Add indicator for tracking
+          max_tokens: 150
         };
       } else if (id === 'poyo') {
         url = 'https://api.poyo.ai/v1/chat/completions';
@@ -602,10 +612,10 @@ const ApiTest: React.FC = () => {
                           Portkey API Key
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           value={apiKeys.portkey}
                           onChange={(e) => setApiKeys(prev => ({ ...prev, portkey: e.target.value }))}
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-xs"
                         />
                       </div>
                       <div>
@@ -613,10 +623,10 @@ const ApiTest: React.FC = () => {
                           Poyo Key 1
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           value={apiKeys.poyo1}
                           onChange={(e) => setApiKeys(prev => ({ ...prev, poyo1: e.target.value }))}
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-xs"
                         />
                       </div>
                       <div>
@@ -624,10 +634,10 @@ const ApiTest: React.FC = () => {
                           Poyo Key 2
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           value={apiKeys.poyo2}
                           onChange={(e) => setApiKeys(prev => ({ ...prev, poyo2: e.target.value }))}
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-xs"
                         />
                       </div>
                     </div>
@@ -637,10 +647,10 @@ const ApiTest: React.FC = () => {
                           OpenRouter Key 1
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           value={apiKeys.openrouter1}
                           onChange={(e) => setApiKeys(prev => ({ ...prev, openrouter1: e.target.value }))}
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-xs"
                         />
                       </div>
                       <div>
@@ -648,10 +658,10 @@ const ApiTest: React.FC = () => {
                           OpenRouter Key 2
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           value={apiKeys.openrouter2}
                           onChange={(e) => setApiKeys(prev => ({ ...prev, openrouter2: e.target.value }))}
-                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-xs"
                         />
                       </div>
                     </div>
