@@ -5,6 +5,8 @@ import PoYoClient from '../lib/poyoClient';
 
 const poyo = process.env.POYO_API_KEY ? new PoYoClient({ apiKey: process.env.POYO_API_KEY }) : null;
 const OPENROUTER_API_KEY = "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";
+const PORTKEY_API_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU";
+const NEW_POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79";
 
 let _ai: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI {
@@ -25,6 +27,17 @@ function getAI(): GoogleGenAI {
              options.httpOptions = {
                  apiVersion: "v1",
                  baseUrl: "https://openrouter.ai/api/v1"
+             };
+        } else if (PORTKEY_API_KEY) {
+             // Fallback to Portkey
+             options.apiKey = PORTKEY_API_KEY;
+             options.httpOptions = {
+                 apiVersion: "v1",
+                 baseUrl: "https://api.portkey.ai/v1",
+                 customHeaders: {
+                     "x-portkey-api-key": PORTKEY_API_KEY,
+                     "x-portkey-provider": "openai"
+                 }
              };
         } else {
             if (!apiKey) {
@@ -324,14 +337,16 @@ export const generateVideoScript = async (prompt: string, image: string | null, 
 };
 
 export const generateSceneVideo = async (description: string): Promise<string[]> => {
-    if (!poyo) throw new Error("PoYo AI client not initialized.");
-    const result = await poyo.generateVideo('kling-1.5', description);
+    const client = NEW_POYO_KEY ? new PoYoClient({ apiKey: NEW_POYO_KEY }) : poyo;
+    if (!client) throw new Error("PoYo AI client not initialized.");
+    const result = await client.generateVideo('kling-1.5', description);
     return [result.url || result.video_url || result];
 };
 
 export const generateSceneImage = async (description: string): Promise<string> => {
-    if (!poyo) throw new Error("PoYo AI client not initialized.");
-    const result = await poyo.generateImage('flux.2', description);
+    const client = NEW_POYO_KEY ? new PoYoClient({ apiKey: NEW_POYO_KEY }) : poyo;
+    if (!client) throw new Error("PoYo AI client not initialized.");
+    const result = await client.generateImage('flux.2', description);
     return result.url || result.image_url || result;
 };
 
