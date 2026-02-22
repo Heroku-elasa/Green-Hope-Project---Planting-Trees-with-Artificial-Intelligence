@@ -474,31 +474,16 @@ export const askGoogleBabaAboutImage = async (base64: string, mimeType: string, 
     return response.text;
 };
 
-export const analyzeDeforestation = async (coords: Coords, language: string = 'en'): Promise<DeforestationAnalysis> => {
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Deforestation at ${coords.lat}, ${coords.lng}`,
-        config: {
-            systemInstruction: `Satellite analyst. Language: ${language}`,
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    status: { type: Type.STRING },
-                    estimatedLossPercent: { type: Type.NUMBER },
-                    primaryCauses: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    replantingSuggestions: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: { lat: { type: Type.NUMBER }, lng: { type: Type.NUMBER }, note: { type: Type.STRING } },
-                            required: ["lat", "lng", "note"]
-                        }
-                    }
-                },
-                required: ["status", "estimatedLossPercent", "primaryCauses", "replantingSuggestions"]
-            }
+export const generateBlogImage = async (prompt: string): Promise<string> => {
+    try {
+        const client = NEW_POYO_KEY ? new PoYoClient({ apiKey: NEW_POYO_KEY }) : poyo;
+        if (client) {
+            const result = await client.generateImage('flux.2', `Blog post illustration for: ${prompt}. Professional, high-quality, nature-themed.`);
+            return result.url || result.image_url || result;
         }
-    });
-    return JSON.parse(response.text.trim());
+    } catch (error) {
+        console.error("Failed to generate blog image via PoYo:", error);
+    }
+    // Fallback to a placeholder service if PoYo is unavailable or fails
+    return `https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000`;
 };
