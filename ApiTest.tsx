@@ -149,6 +149,14 @@ const ApiTest: React.FC = () => {
           openrouter1: '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',
           openrouter2: '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'
         }));
+        
+        // Force update default models if they were stuck on old versions
+        setProviders(prev => prev.map(p => {
+          if (p.id === 'openrouter' && p.model.includes('0528')) {
+            return { ...p, model: 'deepseek/deepseek-r1:free' };
+          }
+          return p;
+        }));
       } catch (e) {
         console.error('Error loading saved keys:', e);
       }
@@ -234,6 +242,9 @@ const ApiTest: React.FC = () => {
               setTestResult({ provider: id, success: true, duration, response: responseText, model });
               updateProviderStatus(id, 'success', undefined, duration);
               addLog(id, model, 'success', duration, undefined, responseText);
+              
+              // If it's the default model, update the provider's active model display
+              setProviders(prev => prev.map(p => p.id === id ? { ...p, model } : p));
               
               // Save to "Working APIs" in DB
               try {
