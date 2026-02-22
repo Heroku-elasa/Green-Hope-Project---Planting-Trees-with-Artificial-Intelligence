@@ -56,7 +56,7 @@ const AdminPanel: React.FC = () => {
     }
 
     const apiKeys = [
-        { name: 'OpenRouter API Key', key: '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', url: 'https://openrouter.ai/settings/keys' },
+        { name: 'OpenRouter API Key', key: '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', url: 'https://openrouter.ai/settings/keys' },
         { name: 'PoYo API Key', key: 'sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79', url: 'https://poyo.ai/dashboard/api-key' },
         { name: 'Portkey API Key', key: 'ST4fIU5r6s6JvLGE/ad2F+8CCCrU', url: 'https://app.portkey.ai/api-keys' }
     ];
