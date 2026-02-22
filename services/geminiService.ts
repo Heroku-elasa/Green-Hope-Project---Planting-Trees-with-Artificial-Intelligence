@@ -487,3 +487,32 @@ export const generateBlogImage = async (prompt: string): Promise<string> => {
     // Fallback to a placeholder service if PoYo is unavailable or fails
     return `https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000`;
 };
+
+export const analyzeDeforestation = async (coords: Coords, language: string = 'en'): Promise<DeforestationAnalysis> => {
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: `Deforestation at ${coords.lat}, ${coords.lng}`,
+        config: {
+            systemInstruction: `Satellite analyst. Language: ${language}`,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    status: { type: Type.STRING },
+                    estimatedLossPercent: { type: Type.NUMBER },
+                    primaryCauses: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    replantingSuggestions: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: { lat: { type: Type.NUMBER }, lng: { type: Type.NUMBER }, note: { type: Type.STRING } },
+                            required: ["lat", "lng", "note"]
+                        }
+                    }
+                },
+                required: ["status", "estimatedLossPercent", "primaryCauses", "replantingSuggestions"]
+            }
+        }
+    });
+    return JSON.parse(response.text.trim());
+};
