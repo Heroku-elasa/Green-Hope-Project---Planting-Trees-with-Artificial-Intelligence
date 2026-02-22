@@ -55,16 +55,12 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     name: 'OpenRouter',
     enabled: true,
     priority: 2,
-    model: 'deepseek/deepseek-r1-0528:free',
+    model: 'deepseek/deepseek-r1:free',
     models: [
-      'deepseek/deepseek-r1-0528:free',
-      'stepfun/step-3.5-flash:free',
-      'arcee-ai/trinity-large-preview:free',
-      'upstage/solar-pro-3:free',
-      'liquid/lfm-2.5-1.2b-thinking:free',
-      'google/gemini-2.0-flash-001:free',
-      'google/gemini-2.0-pro-exp-02-05:free',
+      'deepseek/deepseek-r1:free',
+      'google/gemini-2.0-flash:free',
       'meta-llama/llama-3.3-70b-instruct:free',
+      'mistralai/mistral-7b-instruct:free',
       'qwen/qwen-2.5-72b-instruct:free'
     ],
     endpoint: 'openrouter.ai',
@@ -232,9 +228,9 @@ const ApiTest: React.FC = () => {
             const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(currentBody) });
             const data = await res.json();
             
-            if (res.ok && data.choices?.[0]?.message?.content) {
+            if (res.ok && (data.choices?.[0]?.message?.content || data.images?.[0]?.url || data.url)) {
               const duration = Date.now() - start;
-              const responseText = data.choices[0].message.content;
+              const responseText = data.choices?.[0]?.message?.content || (data.images?.[0]?.url ? `Image generated: ${data.images[0].url}` : (data.url ? `Generated: ${data.url}` : 'Success'));
               setTestResult({ provider: id, success: true, duration, response: responseText, model });
               updateProviderStatus(id, 'success', undefined, duration);
               addLog(id, model, 'success', duration, undefined, responseText);
@@ -266,14 +262,27 @@ const ApiTest: React.FC = () => {
         if (!success) throw new Error(lastErr || 'All keys failed');
         return;
       } else if (id === 'poyo') {
-        url = 'https://api.poyo.ai/v1/chat/completions';
-        apiKey = apiKeys.poyo1;
-        headers['Authorization'] = `Bearer ${apiKey}`;
-        body = {
-          model: model,
-          messages: [{ role: 'user', content: testPrompt }],
-          max_tokens: 150
-        };
+        const isImageModel = model.includes('seedream') || model.includes('kling') || model.includes('pika');
+        if (isImageModel) {
+          url = 'https://api.poyo.ai/v1/images/generations';
+          apiKey = apiKeys.poyo1;
+          headers['Authorization'] = `Bearer ${apiKey}`;
+          body = {
+            model: model,
+            prompt: testPrompt,
+            n: 1,
+            size: "1024x1024"
+          };
+        } else {
+          url = 'https://api.poyo.ai/v1/chat/completions';
+          apiKey = apiKeys.poyo1;
+          headers['Authorization'] = `Bearer ${apiKey}`;
+          body = {
+            model: model,
+            messages: [{ role: 'user', content: testPrompt }],
+            max_tokens: 150
+          };
+        }
       } else if (id === 'portkey') {
         apiKey = apiKeys.portkey;
         if (!apiKey) {
@@ -281,7 +290,7 @@ const ApiTest: React.FC = () => {
         }
         url = 'https://api.portkey.ai/v1/chat/completions';
         headers['x-portkey-api-key'] = apiKey;
-        headers['x-portkey-provider'] = 'google-vertex-ai';
+        headers['x-portkey-provider'] = 'openai'; // Changed from google-vertex-ai to openai for gpt-3.5-turbo
         body = {
           model: model,
           messages: [{ role: 'user', content: testPrompt }],
@@ -302,8 +311,8 @@ const ApiTest: React.FC = () => {
       const data = await res.json();
       const duration = Date.now() - start;
 
-      if (res.ok && data.choices?.[0]?.message?.content) {
-        const responseText = data.choices[0].message.content;
+      if (res.ok && (data.choices?.[0]?.message?.content || data.images?.[0]?.url || data.url)) {
+        const responseText = data.choices?.[0]?.message?.content || (data.images?.[0]?.url ? `Image generated: ${data.images[0].url}` : (data.url ? `Generated: ${data.url}` : 'Success'));
         setTestResult({ 
           provider: id, 
           success: true, 
