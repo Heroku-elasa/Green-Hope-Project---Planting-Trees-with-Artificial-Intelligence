@@ -263,9 +263,9 @@ const ApiTest: React.FC = () => {
         return;
       } else if (id === 'poyo') {
         const isImageModel = model.includes('seedream') || model.includes('kling') || model.includes('pika');
+        apiKey = apiKeys.poyo1;
         if (isImageModel) {
           url = 'https://api.poyo.ai/v1/images/generations';
-          apiKey = apiKeys.poyo1;
           headers['Authorization'] = `Bearer ${apiKey}`;
           body = {
             model: model,
@@ -275,7 +275,6 @@ const ApiTest: React.FC = () => {
           };
         } else {
           url = 'https://api.poyo.ai/v1/chat/completions';
-          apiKey = apiKeys.poyo1;
           headers['Authorization'] = `Bearer ${apiKey}`;
           body = {
             model: model,
