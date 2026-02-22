@@ -112,9 +112,15 @@ const ApiTest: React.FC = () => {
     portkey: 'ST4fIU5r6s6JvLGE/ad2F+8CCCrU',
     poyo1: 'sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79',
     poyo2: '',
-    openrouter1: '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',
+    openrouter1: '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',
     openrouter2: ''
   });
+
+  const [workingModels, setWorkingModels] = useState<{name: string, api: string}[]>([
+    { name: 'Gemini 2.0 Flash', api: 'OpenRouter' },
+    { name: 'Seedream 4.5', api: 'Poyo' },
+    { name: 'GPT-3.5 Turbo', api: 'Portkey' }
+  ]);
 
   useEffect(() => {
     const savedKeys = localStorage.getItem('arman-api-keys');
@@ -584,66 +590,110 @@ const ApiTest: React.FC = () => {
             )}
 
             {activeTab === 'settings' && (
-              <div className="space-y-6 max-w-2xl">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                  ⚙️ {isRtl ? 'تنظیمات کلیدهای API' : 'API Key Settings'}
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Portkey API Key</label>
-                    <input
-                      type="text"
-                      value={apiKeys.portkey}
-                      onChange={(e) => setApiKeys({ ...apiKeys, portkey: e.target.value })}
-                      className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
-                    />
+              <div className="space-y-8">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+                    🔐 {isRtl ? 'تنظیمات کلیدهای API' : 'API Key Settings'}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Portkey API Key
+                        </label>
+                        <input
+                          type="password"
+                          value={apiKeys.portkey}
+                          onChange={(e) => setApiKeys(prev => ({ ...prev, portkey: e.target.value }))}
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Poyo Key 1
+                        </label>
+                        <input
+                          type="password"
+                          value={apiKeys.poyo1}
+                          onChange={(e) => setApiKeys(prev => ({ ...prev, poyo1: e.target.value }))}
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Poyo Key 2
+                        </label>
+                        <input
+                          type="password"
+                          value={apiKeys.poyo2}
+                          onChange={(e) => setApiKeys(prev => ({ ...prev, poyo2: e.target.value }))}
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          OpenRouter Key 1
+                        </label>
+                        <input
+                          type="password"
+                          value={apiKeys.openrouter1}
+                          onChange={(e) => setApiKeys(prev => ({ ...prev, openrouter1: e.target.value }))}
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          OpenRouter Key 2
+                        </label>
+                        <input
+                          type="password"
+                          value={apiKeys.openrouter2}
+                          onChange={(e) => setApiKeys(prev => ({ ...prev, openrouter2: e.target.value }))}
+                          className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Poyo Key 1</label>
-                      <input
-                        type="text"
-                        value={apiKeys.poyo1}
-                        onChange={(e) => setApiKeys({ ...apiKeys, poyo1: e.target.value })}
-                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Poyo Key 2</label>
-                      <input
-                        type="text"
-                        value={apiKeys.poyo2}
-                        onChange={(e) => setApiKeys({ ...apiKeys, poyo2: e.target.value })}
-                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
-                      />
-                    </div>
+                  <div className="mt-6">
+                    <button
+                      onClick={saveApiKeys}
+                      className="w-full md:w-auto px-8 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md"
+                    >
+                      {isRtl ? 'ذخیره کلیدها' : 'Save Keys'}
+                    </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OpenRouter Key 1</label>
-                      <input
-                        type="text"
-                        value={apiKeys.openrouter1}
-                        onChange={(e) => setApiKeys({ ...apiKeys, openrouter1: e.target.value })}
-                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OpenRouter Key 2</label>
-                      <input
-                        type="text"
-                        value={apiKeys.openrouter2}
-                        onChange={(e) => setApiKeys({ ...apiKeys, openrouter2: e.target.value })}
-                        className="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-xs"
-                      />
-                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border dark:border-gray-700">
+                  <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-gray-900 dark:text-white">
+                    🚀 {isRtl ? 'مدل‌های فعال و API ها' : 'Working Models and APIs'}
+                  </h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+                          <th className="pb-3 font-medium">{isRtl ? 'نام مدل' : 'Model Name'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'سرویس API' : 'API Service'}</th>
+                          <th className="pb-3 font-medium">{isRtl ? 'وضعیت' : 'Status'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workingModels.map((model, idx) => (
+                          <tr key={idx} className="border-b dark:border-gray-700">
+                            <td className="py-4 font-medium text-gray-900 dark:text-white">{model.name}</td>
+                            <td className="py-4 text-gray-700 dark:text-gray-300">{model.api}</td>
+                            <td className="py-4">
+                              <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-bold">
+                                {isRtl ? 'آماده' : 'Ready'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <button
-                    onClick={saveApiKeys}
-                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
-                  >
-                    {isRtl ? 'ذخیره کلیدها' : 'Save Keys'}
-                  </button>
                 </div>
               </div>
             )}
