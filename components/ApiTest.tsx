@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface AIProvider {
   id: string;
@@ -60,26 +60,59 @@ const ApiTest: React.FC = () => {
   const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
   const [logs, setLogs] = useState<AILog[]>([]);
   const [testPrompt, setTestPrompt] = useState('یک جمله کوتاه بگو.');
+  const [savedResults, setSavedResults] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchSavedResults();
+  }, []);
+
+  const fetchSavedResults = async () => {
+    try {
+      const response = await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'SELECT * FROM api_status ORDER BY last_tested DESC LIMIT 20' })
+      });
+      const data = await response.json();
+      if (data.rows) setSavedResults(data.rows);
+    } catch (err) {
+      console.error('Failed to fetch saved results:', err);
+    }
+  };
+
+  const saveResult = async (provider: string, model: string, status: string, latency: number) => {
+    try {
+      await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'INSERT INTO api_status (provider, model, status, latency) VALUES ($1, $2, $3, $4)',
+          params: [provider, model, status, latency]
+        })
+      });
+      fetchSavedResults();
+    } catch (err) {
+      console.error('Failed to save result:', err);
+    }
+  };
 
   const addLog = (log: AILog) => setLogs(prev => [log, ...prev].slice(0, 50));
 
-  const testProvider = async (provider: AIProvider) => {
-    const id = provider.id;
-    setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'testing' } : p));
-    
+  const testModel = async (provider: AIProvider, model: string) => {
     try {
       let url = provider.endpoint;
       let headers: Record<string, string> = { 'Content-Type': 'application/json' };
       let body: any = {
+        model: model,
         messages: [{ role: 'user', content: testPrompt }],
         max_tokens: 60
       };
 
-      if (id === 'openrouter') {
+      if (provider.id === 'openrouter') {
         headers['Authorization'] = `Bearer ${API_KEYS.openrouter}`;
         headers['HTTP-Referer'] = window.location.origin;
         headers['X-Title'] = 'Green Hope Project';
-      } else if (id === 'portkey') {
+      } else if (provider.id === 'portkey') {
         headers['x-portkey-api-key'] = API_KEYS.portkey;
         headers['x-portkey-provider'] = 'openai';
       }
@@ -89,22 +122,36 @@ const ApiTest: React.FC = () => {
       const data = await res.json();
       const duration = Date.now() - start;
 
-      if (res.ok && data.choices?.[0]?.message?.content) {
-        const response = data.choices[0].message.content;
-        setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'success', lastLatency: duration } : p));
-        addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: id, model: provider.model, status: 'success', duration, response });
+      if (res.ok && (data.choices?.[0]?.message?.content || data.choices?.[0]?.text)) {
+        const response = data.choices[0].message?.content || data.choices[0].text;
+        saveResult(provider.id, model, 'success', duration);
+        addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: provider.id, model, status: 'success', duration, response });
+        return { success: true, duration };
       } else {
         throw new Error(data.error?.message || res.statusText);
       }
     } catch (err: any) {
-      setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'error', lastError: err.message } : p));
-      addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: id, model: provider.model, status: 'error', duration: 0, error: err.message });
+      saveResult(provider.id, model, 'error', 0);
+      addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: provider.id, model, status: 'error', duration: 0, error: err.message });
+      return { success: false, error: err.message };
+    }
+  };
+
+  const testAll = async () => {
+    for (const provider of providers) {
+      // Test at least half of the models
+      const modelsToTest = provider.models.slice(0, Math.ceil(provider.models.length / 2));
+      for (const model of modelsToTest) {
+        await testModel(provider, model);
+        await new Promise(r => setTimeout(r, 500));
+      }
     }
   };
 
   return (
     <div className="p-6 rtl bg-gray-900 text-white border-b border-gray-700">
-      <h1 className="text-2xl font-bold mb-4">🧪 تست APIهای هوش مصنوعی</h1>
+      <h1 className="text-2xl font-bold mb-4">🧪 تست عمیق APIهای هوش مصنوعی</h1>
+      
       <div className="mb-6 flex gap-4">
         <input
           type="text"
@@ -113,29 +160,60 @@ const ApiTest: React.FC = () => {
           className="bg-gray-800 border border-gray-700 p-2 rounded flex-1"
         />
         <button
-          onClick={() => providers.forEach(testProvider)}
-          className="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700"
+          onClick={testAll}
+          className="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700 font-bold"
         >
-          تست همه
+          تست همه‌جانبه (Deep Test)
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {providers.map(p => (
-          <div key={p.id} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <h2 className="font-bold">{p.name}</h2>
-            <p className="text-sm text-gray-400">مدل: {p.model}</p>
-            <div className="mt-2">
-              وضعیت: {p.status === 'success' ? '✅ موفق' : p.status === 'error' ? '❌ خطا' : '⚪ در انتظار'}
-            </div>
-            {p.lastError && <p className="text-red-400 text-xs mt-1">{p.lastError}</p>}
-            <button
-              onClick={() => testProvider(p)}
-              className="mt-3 bg-gray-700 px-4 py-1 rounded text-sm hover:bg-gray-600"
-            >
-              تست مجدد
-            </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-xl font-bold mb-4 text-blue-400">نتایج ذخیره شده در دیتابیس</h2>
+          <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th className="p-2">سرویس</th>
+                  <th className="p-2">مدل</th>
+                  <th className="p-2">وضعیت</th>
+                  <th className="p-2">تاخیر (ms)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {savedResults.map((r, i) => (
+                  <tr key={i} className="border-t border-gray-700">
+                    <td className="p-2">{r.provider}</td>
+                    <td className="p-2">{r.model}</td>
+                    <td className="p-2">
+                      <span className={r.status === 'success' ? 'text-green-400' : 'text-red-400'}>
+                        {r.status === 'success' ? 'فعال' : 'غیرفعال'}
+                      </span>
+                    </td>
+                    <td className="p-2">{r.latency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold mb-4 text-green-400">لاگ‌های تست زنده</h2>
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+            {logs.map(log => (
+              <div key={log.id} className={`p-2 rounded border-l-4 ${log.status === 'success' ? 'bg-green-900/20 border-green-500' : 'bg-red-900/20 border-red-500'}`}>
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>{log.provider} - {log.model}</span>
+                  <span>{log.duration}ms</span>
+                </div>
+                <div className="text-sm mt-1">
+                  {log.status === 'success' ? log.response?.substring(0, 100) + '...' : log.error}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
