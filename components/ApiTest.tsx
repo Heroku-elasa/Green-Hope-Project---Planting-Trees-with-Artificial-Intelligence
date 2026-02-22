@@ -30,11 +30,10 @@ const DEFAULT_PROVIDERS: AIProvider[] = [
     enabled: true,
     model: 'deepseek/deepseek-r1-0528:free',
     models: [
-      'deepseek/deepseek-r1-0528:free',
-      'upstage/solar-pro-3:free',
-      'arcee-ai/trinity-large-preview:free',
-      'stepfun/step-3.5-flash:free',
-      'z-ai/glm-4.5-air:free'
+      'google/gemini-2.0-pro-exp-02-05:free',
+      'google/gemini-2.0-flash-exp:free',
+      'deepseek/deepseek-r1:free',
+      'mistralai/mistral-7b-instruct:free'
     ],
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     status: 'idle'

@@ -8,6 +8,13 @@ const OPENROUTER_API_KEY = "sk-or-v1-2ea63ede6b1407dc029723e83d8b9b6d6bf0ec74f90
 const PORTKEY_API_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU";
 const NEW_POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79";
 
+const OPENROUTER_MODELS = [
+    "google/gemini-2.0-pro-exp-02-05:free",
+    "google/gemini-2.0-flash-exp:free",
+    "deepseek/deepseek-r1:free",
+    "mistralai/mistral-7b-instruct:free"
+];
+
 let _ai: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI {
     if (!_ai) {
@@ -93,7 +100,7 @@ export const findPlantingAreas = async (polygon: { lat: number, lng: number }[],
                     "X-Title": "Green Hope Project"
                 },
                 body: JSON.stringify({
-                    model: "deepseek/deepseek-chat",
+                    model: "google/gemini-2.0-pro-exp-02-05:free",
                     messages: [
                         { role: "system", content: systemInstruction },
                         { role: "user", content: contents }
