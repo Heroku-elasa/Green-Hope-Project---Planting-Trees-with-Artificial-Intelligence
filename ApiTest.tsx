@@ -94,6 +94,24 @@ const ApiTest: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [savedResults, setSavedResults] = useState<any[]>([]);
 
+  const PROVIDER_INFO: {[key: string]: {tier: string, limit: string, note: string}} = {
+    poyo: { 
+      tier: isRtl ? 'رایگان / آزمایشی' : 'Free / Trial', 
+      limit: '20 RPM / 100 RPD', 
+      note: isRtl ? 'تمرکز روی تولید ویدیو و تصویر (Kling, Seedream)' : 'Focus on Video/Image (Kling, Seedream)'
+    },
+    openrouter: { 
+      tier: isRtl ? 'رایگان (مدل‌های مشخص)' : 'Free (Specific Models)', 
+      limit: '20 RPM / 50 RPD', 
+      note: isRtl ? 'دسترسی به Gemini, Llama, Mistral رایگان' : 'Access to Gemini, Llama, Mistral Free'
+    },
+    portkey: { 
+      tier: isRtl ? 'رایگان (Gateway)' : 'Free (Gateway)', 
+      limit: '60 RPM', 
+      note: isRtl ? 'درگاه برای دسترسی به مدل‌های مختلف' : 'Gateway for various models access'
+    }
+  };
+
   useEffect(() => {
     fetchSavedResults();
   }, []);
@@ -562,9 +580,43 @@ const ApiTest: React.FC = () => {
                         {getStatusBadge(provider.status)}
                       </div>
 
+                      <div className="grid grid-cols-2 gap-2 mb-4 text-[10px]">
+                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                          <span className="text-gray-500 block">{isRtl ? 'سطح:' : 'Tier:'}</span>
+                          <span className="font-bold text-gray-700 dark:text-gray-300">{PROVIDER_INFO[provider.id]?.tier}</span>
+                        </div>
+                        <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded">
+                          <span className="text-gray-500 block">{isRtl ? 'محدودیت:' : 'Limit:'}</span>
+                          <span className="font-bold text-gray-700 dark:text-gray-300">{PROVIDER_INFO[provider.id]?.limit}</span>
+                        </div>
+                      </div>
+
                       <div className="mb-4">
                         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                          {isRtl ? 'مدل:' : 'Model:'}
+                          {isRtl ? 'مدل‌های تست شده و فعال:' : 'Verified Working Models:'}
+                        </label>
+                        <div className="flex flex-wrap gap-1">
+                          {provider.models.map(m => {
+                            const isWorking = savedResults.some(r => r.api_name === provider.id && r.model === m && r.status === 'WORKS');
+                            return (
+                              <span 
+                                key={m} 
+                                className={`text-[9px] px-1.5 py-0.5 rounded border ${
+                                  isWorking 
+                                    ? 'bg-green-100 border-green-200 text-green-700 font-bold' 
+                                    : 'bg-gray-100 border-gray-200 text-gray-400'
+                                }`}
+                              >
+                                {m.split('/').pop()}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          {isRtl ? 'مدل انتخابی برای تست:' : 'Select Model for Test:'}
                         </label>
                         <select
                           value={selectedModel[provider.id] || provider.model}
