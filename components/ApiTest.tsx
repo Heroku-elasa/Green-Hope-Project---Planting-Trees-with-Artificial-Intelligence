@@ -61,6 +61,7 @@ const ApiTest: React.FC = () => {
   const [logs, setLogs] = useState<AILog[]>([]);
   const [testPrompt, setTestPrompt] = useState('یک جمله کوتاه بگو.');
   const [savedResults, setSavedResults] = useState<any[]>([]);
+  const [backupResults, setBackupResults] = useState<any[]>([]);
 
   useEffect(() => {
     fetchSavedResults();
@@ -68,15 +69,39 @@ const ApiTest: React.FC = () => {
 
   const fetchSavedResults = async () => {
     try {
-      const response = await fetch('/api/db/query', {
+      const res = await fetch('/api/db/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: 'SELECT * FROM api_test_results ORDER BY status DESC, latency ASC, tested_at DESC LIMIT 50' })
       });
-      const data = await response.json();
+      const data = await res.json();
       if (data.rows) setSavedResults(data.rows);
+
+      const backupRes = await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'SELECT * FROM api_backups ORDER BY tested_at DESC LIMIT 50' })
+      });
+      const backupData = await backupRes.json();
+      if (backupData.rows) setBackupResults(backupData.rows);
     } catch (err) {
-      console.error('Failed to fetch saved results:', err);
+      console.error('Failed to fetch results:', err);
+    }
+  };
+
+  const saveToBackup = async (provider: string, model: string, status: string, latency: number, responseText: string) => {
+    try {
+      await fetch('/api/db/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: 'INSERT INTO api_backups (api_name, model, status, latency, response) VALUES ($1, $2, $3, $4, $5)',
+          params: [provider, model, status, latency, responseText]
+        })
+      });
+      fetchSavedResults();
+    } catch (err) {
+      console.error('Failed to save to backup:', err);
     }
   };
 
@@ -123,9 +148,9 @@ const ApiTest: React.FC = () => {
       const start = Date.now();
       let res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
       
-      // Fallback to OpenRouter if Portkey fails
-      if (!res.ok && provider.id === 'portkey' && API_KEYS.openrouter) {
-        console.log('Portkey failed, falling back to OpenRouter...');
+      // Fallback to OpenRouter if Portkey or other providers fail
+      if (!res.ok && API_KEYS.openrouter) {
+        console.log(`${provider.name} failed, falling back to OpenRouter...`);
         url = 'https://openrouter.ai/api/v1/chat/completions';
         headers = { 
           'Content-Type': 'application/json',
@@ -133,7 +158,7 @@ const ApiTest: React.FC = () => {
           'HTTP-Referer': window.location.origin,
           'X-Title': 'Green Hope Project (Fallback)'
         };
-        body.model = 'deepseek/deepseek-r1-0528:free'; // Use a reliable free fallback
+        body.model = 'deepseek/deepseek-chat'; // Reliable fallback
         res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
       }
 
@@ -141,15 +166,19 @@ const ApiTest: React.FC = () => {
       const duration = Date.now() - start;
 
       if (res.ok && (data.choices?.[0]?.message?.content || data.choices?.[0]?.text)) {
-        const response = data.choices[0].message?.content || data.choices[0].text;
+        const responseText = data.choices[0].message?.content || data.choices[0].text;
         saveResult(provider.id, model, 'success', duration);
-        addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: provider.id, model, status: 'success', duration, response });
+        saveToBackup(provider.id, model, 'WORKS', duration, responseText);
+        addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: provider.id, model, status: 'success', duration, response: responseText });
         return { success: true, duration };
       } else {
-        throw new Error(data.error?.message || res.statusText);
+        const errorMsg = data.error?.message || res.statusText || 'Unknown Error';
+        saveToBackup(provider.id, model, 'FAILED', duration, errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
       saveResult(provider.id, model, 'error', 0);
+      saveToBackup(provider.id, model, 'FAILED', 0, err.message);
       addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: provider.id, model, status: 'error', duration: 0, error: err.message });
       return { success: false, error: err.message };
     }
@@ -231,6 +260,38 @@ const ApiTest: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-xl font-bold mb-4 text-purple-400">تاریخچه بک‌آپ (Backup History)</h2>
+        <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+          <table className="w-full text-right text-sm">
+            <thead className="bg-gray-700">
+              <tr>
+                <th className="p-2 text-right">سرویس</th>
+                <th className="p-2 text-right">مدل</th>
+                <th className="p-2 text-right">وضعیت</th>
+                <th className="p-2 text-right">تاخیر</th>
+                <th className="p-2 text-right">زمان تست</th>
+              </tr>
+            </thead>
+            <tbody>
+              {backupResults.map((r, i) => (
+                <tr key={i} className="border-t border-gray-700">
+                  <td className="p-2">{r.api_name}</td>
+                  <td className="p-2">{r.model}</td>
+                  <td className="p-2">
+                    <span className={r.status === 'WORKS' ? 'text-green-400' : 'text-red-400'}>
+                      {r.status === 'WORKS' ? 'فعال' : 'ناموفق'}
+                    </span>
+                  </td>
+                  <td className="p-2">{r.latency}ms</td>
+                  <td className="p-2 text-gray-500">{new Date(r.tested_at).toLocaleString('fa-IR')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

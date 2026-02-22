@@ -21,13 +21,18 @@ function getAI(): GoogleGenAI {
                 apiVersion: "v1beta",
                 baseUrl: replitBaseUrl
             };
-        } else if (OPENROUTER_API_KEY) {
-             // Fallback to OpenRouter if no Gemini key
-             options.apiKey = OPENROUTER_API_KEY;
-             options.httpOptions = {
-                 apiVersion: "v1",
-                 baseUrl: "https://openrouter.ai/api/v1"
-             };
+            } else if (OPENROUTER_API_KEY) {
+                 // Fallback to OpenRouter if no Gemini key
+                 options.apiKey = OPENROUTER_API_KEY;
+                 options.httpOptions = {
+                     apiVersion: "v1",
+                     baseUrl: "https://openrouter.ai/api/v1",
+                     // Use a reliable model as fallback
+                     headers: {
+                         "HTTP-Referer": "https://replit.com",
+                         "X-Title": "Green Hope Project"
+                     }
+                 };
         } else if (PORTKEY_API_KEY) {
              // Fallback to Portkey
              options.apiKey = PORTKEY_API_KEY;
