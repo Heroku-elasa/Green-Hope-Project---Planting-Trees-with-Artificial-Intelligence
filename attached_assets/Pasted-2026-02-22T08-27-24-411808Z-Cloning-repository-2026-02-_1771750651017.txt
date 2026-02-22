@@ -1,0 +1,76 @@
+2026-02-22T08:27:24.411808Z	Cloning repository...
+2026-02-22T08:27:25.29574Z	From https://github.com/Heroku-elasa/Green-Hope-Project---Planting-Trees-with-Artificial-Intelligence
+2026-02-22T08:27:25.296151Z	 * branch            d40f5c46259b4b2ae61b316e2cfbf7909ad82953 -> FETCH_HEAD
+2026-02-22T08:27:25.296258Z	
+2026-02-22T08:27:25.323488Z	HEAD is now at d40f5c4 Update README with correct project title
+2026-02-22T08:27:25.323878Z	
+2026-02-22T08:27:25.374025Z	
+2026-02-22T08:27:25.374532Z	Using v2 root directory strategy
+2026-02-22T08:27:25.387923Z	Success: Finished cloning repository files
+2026-02-22T08:27:27.661067Z	Checking for configuration in a Wrangler configuration file (BETA)
+2026-02-22T08:27:27.661577Z	
+2026-02-22T08:27:28.773118Z	No Wrangler configuration file found. Continuing.
+2026-02-22T08:27:28.976008Z	Detected the following tools from environment: npm@10.9.2, nodejs@22.16.0, pip@25.1.1, python@3.13.3
+2026-02-22T08:27:28.976419Z	Installing project dependencies: npm clean-install --progress=false
+2026-02-22T08:27:32.41301Z	npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+2026-02-22T08:27:32.859752Z	npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-02-22T08:27:34.501031Z	
+2026-02-22T08:27:34.501301Z	added 269 packages, and audited 270 packages in 5s
+2026-02-22T08:27:34.50137Z	
+2026-02-22T08:27:34.501435Z	47 packages are looking for funding
+2026-02-22T08:27:34.501469Z	  run `npm fund` for details
+2026-02-22T08:27:34.505508Z	
+2026-02-22T08:27:34.505664Z	7 vulnerabilities (1 moderate, 6 high)
+2026-02-22T08:27:34.505739Z	
+2026-02-22T08:27:34.505785Z	To address issues that do not require attention, run:
+2026-02-22T08:27:34.505823Z	  npm audit fix
+2026-02-22T08:27:34.505862Z	
+2026-02-22T08:27:34.505894Z	Some issues need review, and may require choosing
+2026-02-22T08:27:34.505924Z	a different dependency.
+2026-02-22T08:27:34.505953Z	
+2026-02-22T08:27:34.506001Z	Run `npm audit` for details.
+2026-02-22T08:27:34.570022Z	Installing project dependencies: pip install .
+2026-02-22T08:27:35.51289Z	Processing /opt/buildhome/repo
+2026-02-22T08:27:35.516053Z	  Installing build dependencies: started
+2026-02-22T08:27:36.345776Z	  Installing build dependencies: finished with status 'done'
+2026-02-22T08:27:36.347259Z	  Getting requirements to build wheel: started
+2026-02-22T08:27:36.95141Z	  Getting requirements to build wheel: finished with status 'error'
+2026-02-22T08:27:36.957456Z	  error: subprocess-exited-with-error
+2026-02-22T08:27:36.957705Z	  
+2026-02-22T08:27:36.957835Z	  × Getting requirements to build wheel did not run successfully.
+2026-02-22T08:27:36.957909Z	  │ exit code: 1
+2026-02-22T08:27:36.957969Z	  ╰─> [14 lines of output]
+2026-02-22T08:27:36.958022Z	      error: Multiple top-level packages discovered in a flat-layout: ['lib', 'services', 'components', 'node_modules', 'attached_assets'].
+2026-02-22T08:27:36.958065Z	      
+2026-02-22T08:27:36.958111Z	      To avoid accidental inclusion of unwanted files or directories,
+2026-02-22T08:27:36.958142Z	      setuptools will not proceed with this build.
+2026-02-22T08:27:36.95817Z	      
+2026-02-22T08:27:36.958206Z	      If you are trying to create a single distribution with multiple packages
+2026-02-22T08:27:36.958238Z	      on purpose, you should not rely on automatic discovery.
+2026-02-22T08:27:36.958266Z	      Instead, consider the following options:
+2026-02-22T08:27:36.958293Z	      
+2026-02-22T08:27:36.958326Z	      1. set up custom discovery (`find` directive with `include` or `exclude`)
+2026-02-22T08:27:36.958354Z	      2. use a `src-layout`
+2026-02-22T08:27:36.958396Z	      3. explicitly set `py_modules` or `packages` with a list of names
+2026-02-22T08:27:36.9585Z	      
+2026-02-22T08:27:36.958569Z	      To find more information, look for "package discovery" on setuptools docs.
+2026-02-22T08:27:36.958615Z	      [end of output]
+2026-02-22T08:27:36.958677Z	  
+2026-02-22T08:27:36.958798Z	  note: This error originates from a subprocess, and is likely not a problem with pip.
+2026-02-22T08:27:37.030967Z	
+2026-02-22T08:27:37.031286Z	[notice] A new release of pip is available: 25.1.1 -> 26.0.1
+2026-02-22T08:27:37.031361Z	[notice] To update, run: pip3 install --upgrade pip
+2026-02-22T08:27:37.033165Z	error: subprocess-exited-with-error
+2026-02-22T08:27:37.033285Z	
+2026-02-22T08:27:37.033338Z	× Getting requirements to build wheel did not run successfully.
+2026-02-22T08:27:37.033382Z	│ exit code: 1
+2026-02-22T08:27:37.033431Z	╰─> See above for output.
+2026-02-22T08:27:37.033462Z	
+2026-02-22T08:27:37.033501Z	note: This error originates from a subprocess, and is likely not a problem with pip.
+2026-02-22T08:27:37.116674Z	Error: Exit with error code: 1
+2026-02-22T08:27:37.116935Z	    at ChildProcess.<anonymous> (/snapshot/dist/run-build.js)
+2026-02-22T08:27:37.116989Z	    at Object.onceWrapper (node:events:652:26)
+2026-02-22T08:27:37.117028Z	    at ChildProcess.emit (node:events:537:28)
+2026-02-22T08:27:37.117076Z	    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+2026-02-22T08:27:37.122405Z	Failed: build command exited with code: 1
+2026-02-22T08:27:39.230876Z	Failed: error occurred while running build command

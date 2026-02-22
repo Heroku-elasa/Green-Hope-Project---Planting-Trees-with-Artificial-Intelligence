@@ -1,0 +1,157 @@
+
+Account home
+
+Recents
+
+
+
+
+
+
+Analytics & logs
+Domains
+
+Compute
+
+AI
+
+Storage & databases
+
+Media
+
+Application security
+Zero Trust
+
+Networking
+
+Delivery & performance
+
+Domain registration
+
+Manage account
+ green-hope-project---planting-trees-with-artificial-intell
+Deployment details
+Repository:
+
+Heroku-elasa/Green-Hope-Project---Planting-Trees-with-Artificial-Intelligence
+Branch:
+main
+d40f5c4
+Update README with correct project title
+Status:
+Failed
+11:57AM February 22, 2026
+Duration:
+16s
+Build settings
+To change settings for your next deployment go to this project's Settings.
+
+Build command:
+npm run build
+Build output directory:
+/dist
+Build system version:
+3 (latest)
+Root directory:
+/
+Environment variables:
+Variable name	Value
+GEMINI_API_KEY
+AIzaSyD7b445rsaAXvZZbA_H_owXHst10vXYmiA
+Build log
+Functions
+Redirects
+Headers
+Build log
+Initializing build environment
+2s
+Cloning git repository
+2s
+Building application
+13s
+Deploying to Cloudflare's global network
+—
+11:57:24.411	Cloning repository...
+11:57:25.295	From https://github.com/Heroku-elasa/Green-Hope-Project---Planting-Trees-with-Artificial-Intelligence
+11:57:25.296	 * branch            d40f5c46259b4b2ae61b316e2cfbf7909ad82953 -> FETCH_HEAD
+11:57:25.296	
+11:57:25.323	HEAD is now at d40f5c4 Update README with correct project title
+11:57:25.323	
+11:57:25.374	
+11:57:25.374	Using v2 root directory strategy
+11:57:25.387	Success: Finished cloning repository files
+11:57:27.661	Checking for configuration in a Wrangler configuration file (BETA)
+11:57:27.661	
+11:57:28.773	No Wrangler configuration file found. Continuing.
+11:57:28.976	Detected the following tools from environment: npm@10.9.2, nodejs@22.16.0, pip@25.1.1, python@3.13.3
+11:57:28.976	Installing project dependencies: npm clean-install --progress=false
+11:57:32.413	npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+11:57:32.859	npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+11:57:34.501	
+11:57:34.501	added 269 packages, and audited 270 packages in 5s
+11:57:34.501	
+11:57:34.501	47 packages are looking for funding
+11:57:34.501	  run `npm fund` for details
+11:57:34.505	
+11:57:34.505	7 vulnerabilities (1 moderate, 6 high)
+11:57:34.505	
+11:57:34.505	To address issues that do not require attention, run:
+11:57:34.505	  npm audit fix
+11:57:34.505	
+11:57:34.505	Some issues need review, and may require choosing
+11:57:34.505	a different dependency.
+11:57:34.505	
+11:57:34.506	Run `npm audit` for details.
+11:57:34.570	Installing project dependencies: pip install .
+11:57:35.512	Processing /opt/buildhome/repo
+11:57:35.516	  Installing build dependencies: started
+11:57:36.345	  Installing build dependencies: finished with status 'done'
+11:57:36.347	  Getting requirements to build wheel: started
+11:57:36.951	  Getting requirements to build wheel: finished with status 'error'
+11:57:36.957	  error: subprocess-exited-with-error
+11:57:36.957	  
+11:57:36.957	  × Getting requirements to build wheel did not run successfully.
+11:57:36.957	  │ exit code: 1
+11:57:36.957	  ╰─> [14 lines of output]
+11:57:36.958	      error: Multiple top-level packages discovered in a flat-layout: ['lib', 'services', 'components', 'node_modules', 'attached_assets'].
+11:57:36.958	      
+11:57:36.958	      To avoid accidental inclusion of unwanted files or directories,
+11:57:36.958	      setuptools will not proceed with this build.
+11:57:36.958	      
+11:57:36.958	      If you are trying to create a single distribution with multiple packages
+11:57:36.958	      on purpose, you should not rely on automatic discovery.
+11:57:36.958	      Instead, consider the following options:
+11:57:36.958	      
+11:57:36.958	      1. set up custom discovery (`find` directive with `include` or `exclude`)
+11:57:36.958	      2. use a `src-layout`
+11:57:36.958	      3. explicitly set `py_modules` or `packages` with a list of names
+11:57:36.958	      
+11:57:36.958	      To find more information, look for "package discovery" on setuptools docs.
+11:57:36.958	      [end of output]
+11:57:36.958	  
+11:57:36.958	  note: This error originates from a subprocess, and is likely not a problem with pip.
+11:57:37.030	
+11:57:37.031	[notice] A new release of pip is available: 25.1.1 -> 26.0.1
+11:57:37.031	[notice] To update, run: pip3 install --upgrade pip
+11:57:37.033	error: subprocess-exited-with-error
+11:57:37.033	
+11:57:37.033	× Getting requirements to build wheel did not run successfully.
+11:57:37.033	│ exit code: 1
+11:57:37.033	╰─> See above for output.
+11:57:37.033	
+11:57:37.033	note: This error originates from a subprocess, and is likely not a problem with pip.
+11:57:37.116	Error: Exit with error code: 1
+11:57:37.116	    at ChildProcess.<anonymous> (/snapshot/dist/run-build.js)
+11:57:37.116	    at Object.onceWrapper (node:events:652:26)
+11:57:37.117	    at ChildProcess.emit (node:events:537:28)
+11:57:37.117	    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+11:57:37.122	Failed: build command exited with code: 1
+11:57:39.230	Failed: error occurred while running build command
+Support
+System status
+Careers
+Terms of Use
+Report Security Issues
+Privacy Policy
+A blue and white pill with a checkmark and an x, representing privacy choicesCookie Preferences
+© 2026 Cloudflare, Inc.
