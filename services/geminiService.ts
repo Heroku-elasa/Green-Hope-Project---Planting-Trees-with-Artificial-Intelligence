@@ -67,6 +67,61 @@ export interface ChatResponse {
     followUpPrompts: string[];
 }
 
+export const findPlantingAreas = async (polygon: { lat: number, lng: number }[], count: number, language: string, useGrounding: boolean): Promise<any[]> => {
+    try {
+        const systemInstruction = `You are an expert ecologist. Identify ${count} optimal planting locations within the provided polygon area. Respond in ${language}. Return JSON array of objects with latitude, longitude, and locationName.`;
+        const contents = `Polygon vertices: ${JSON.stringify(polygon)}`;
+        
+        // Try primary Gemini first
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.0-flash',
+                contents,
+                config: { systemInstruction, responseMimeType: "application/json" }
+            });
+            return JSON.parse(response.text.trim());
+        } catch (geminiError) {
+            console.warn("Gemini failed, trying OpenRouter fallback...", geminiError);
+            
+            // OpenRouter Fallback
+            const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                    "HTTP-Referer": "https://replit.com",
+                    "X-Title": "Green Hope Project"
+                },
+                body: JSON.stringify({
+                    model: "deepseek/deepseek-chat",
+                    messages: [
+                        { role: "system", content: systemInstruction },
+                        { role: "user", content: contents }
+                    ],
+                    response_format: { type: "json_object" }
+                })
+            });
+            
+            const orData = await orResponse.json();
+            const content = orData.choices[0].message.content;
+            const parsed = JSON.parse(content);
+            return parsed.locations || parsed.points || (Array.isArray(parsed) ? parsed : []);
+        }
+    } catch (error) {
+        console.error("Error in findPlantingAreas:", error);
+        return []; 
+    }
+};
+
+export const analyzePolygonArea = async (polygon: { lat: number, lng: number }[], language: string, useGrounding: boolean): Promise<any> => {
+    // Similar fallback logic can be added here
+    return { analysis: "Analysis pending..." };
+};
+
+export const findReforestationAreas = async (language: string): Promise<any[]> => {
+    return [];
+};
+
 export const performSearch = async (query: string): Promise<SearchResultItem[]> => {
     const systemInstruction = `Search assistant for Green Hope Project. Respond in Persian/Farsi if the query is in Farsi.`;
     const response = await ai.models.generateContent({
