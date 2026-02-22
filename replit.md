@@ -5,6 +5,7 @@ A React + TypeScript frontend application built with Vite. The app leverages Goo
 
 ## Recent Changes
 - 2026-02-21: Initial Replit setup - configured Vite for port 5000 with allowedHosts, fixed html-docx-js ESM compatibility, lazy-loaded Gemini API client, created missing index.css
+- 2026-02-22: Integrated deep API testing for Portkey, Poyo, and OpenRouter with PostgreSQL storage. Updated keys and added workable model sorting.
 
 ## Project Architecture
 - **Framework:** React 19 + TypeScript

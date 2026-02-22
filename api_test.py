@@ -73,12 +73,16 @@ def test_models(client, models, api_name, key_short):
         status = "FAILED"
         resp_text = ""
         try:
-            # Special handling for Portkey
+            # Create a separate client instance for Portkey to avoid modifying global state
+            test_client = client
             if api_name == "Portkey":
-                # client.default_headers is a dict in recent OpenAI versions
-                client.default_headers = {"x-portkey-provider": "openai"}
+                test_client = OpenAI(
+                    api_key=client.api_key,
+                    base_url=client.base_url,
+                    default_headers={"x-portkey-provider": "openai"}
+                )
             
-            response = client.chat.completions.create(
+            response = test_client.chat.completions.create(
                 model=model,
                 messages=[{"role": "user", "content": f"Say 'Test OK for {model}'"}],
                 max_tokens=20
@@ -124,15 +128,16 @@ def test_openrouter(key):
     check_openrouter_usage(key, key[:10] + "...")
     client = OpenAI(api_key=key, base_url="https://openrouter.ai/api/v1")
     models = [
-        "deepseek/deepseek-r1:free",
+        "deepseek/deepseek-chat",
         "google/gemini-flash-1.5",
-        "meta-llama/llama-3.2-3b-instruct:free",
+        "meta-llama/llama-3.1-8b-instruct:free",
         "mistralai/mistral-7b-instruct:free",
-        "qwen/qwen-2-7b-instruct:free"
+        "qwen/qwen-2-7b-instruct:free",
+        "deepseek/deepseek-r1:free"
     ]
     # Test half of them
-    test_count = max(1, len(models) // 2)
-    return test_models(client, models[:test_count], "OpenRouter", key[:10] + "...")
+    test_count = len(models)
+    return test_models(client, models, "OpenRouter", key[:10] + "...")
 
 def test_poyo(key):
     print("\n=== Testing Poyo ===")
