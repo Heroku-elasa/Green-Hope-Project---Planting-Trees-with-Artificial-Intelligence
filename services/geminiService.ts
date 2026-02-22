@@ -5,6 +5,7 @@ import PoYoClient from '../lib/poyoClient';
 
 const poyo = process.env.POYO_API_KEY ? new PoYoClient({ apiKey: process.env.POYO_API_KEY }) : null;
 const OPENROUTER_API_KEY = "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";
+const OPENROUTER_API_KEY_2 = "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";
 const PORTKEY_API_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU";
 const NEW_POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79";
 
