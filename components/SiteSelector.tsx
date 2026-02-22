@@ -248,116 +248,126 @@ const SiteSelector: React.FC<SiteSelectorProps> = (props) => {
 
     useEffect(() => {
         if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
-            const map = L.map(mapRef.current, {
-                center: [32.4279, 53.6880],
-                zoom: 5,
-            });
-            mapInstanceRef.current = map;
+            try {
+                const map = L.map(mapRef.current, {
+                    center: [32.4279, 53.6880],
+                    zoom: 5,
+                });
+                mapInstanceRef.current = map;
 
-            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19,
-            });
-
-            tileLayer.on('loading', () => setIsMapLoading(true));
-            tileLayer.on('load', () => setIsMapLoading(false));
-            tileLayer.addTo(map);
-
-            const mapContainer = mapRef.current;
-            if (mapContainer) {
-                const tooltip = document.createElement('div');
-                tooltip.className = 'absolute z-[1001] bg-slate-900/80 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none hidden';
-                mapContainer.appendChild(tooltip);
-
-                map.on('mousemove', (e: any) => {
-                    tooltip.style.left = `${e.containerPoint.x + 10}px`;
-                    tooltip.style.top = `${e.containerPoint.y + 10}px`;
-                    tooltip.innerHTML = `${t('siteSelector.latLabelShort')}: ${e.latlng.lat.toFixed(4)}, ${t('siteSelector.lngLabelShort')}: ${e.latlng.lng.toFixed(4)}`;
-                    tooltip.classList.remove('hidden');
+                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{y}/{x}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19,
                 });
 
-                map.on('mouseout', () => {
-                    tooltip.classList.add('hidden');
+                tileLayer.on('loading', () => setIsMapLoading(true));
+                tileLayer.on('load', () => setIsMapLoading(false));
+                tileLayer.addTo(map);
+
+                const mapContainer = mapRef.current;
+                if (mapContainer) {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'absolute z-[1001] bg-slate-900/80 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none hidden';
+                    mapContainer.appendChild(tooltip);
+
+                    map.on('mousemove', (e: any) => {
+                        tooltip.style.left = `${e.containerPoint.x + 10}px`;
+                        tooltip.style.top = `${e.containerPoint.y + 10}px`;
+                        tooltip.innerHTML = `${t('siteSelector.latLabelShort')}: ${e.latlng.lat.toFixed(4)}, ${t('siteSelector.lngLabelShort')}: ${e.latlng.lng.toFixed(4)}`;
+                        tooltip.classList.remove('hidden');
+                    });
+
+                    map.on('mouseout', () => {
+                        tooltip.classList.add('hidden');
+                    });
+                }
+
+                map.on('click', (e: any) => {
+                    if (mode === 'trees' || mode === 'deforestation') {
+                        const { lat, lng } = e.latlng;
+                        const latLng = { lat, lng };
+
+                        const popupContainer = document.createElement('div');
+                        const popup = L.popup()
+                            .setLatLng(latLng)
+                            .setContent(popupContainer)
+                            .openOn(map);
+                        
+                        const root = createRoot(popupContainer);
+
+                        const handleConfirm = () => {
+                            setCoords(latLng);
+                            map.closePopup(popup);
+                            if (mode === 'trees') {
+                                onFindTrees(latLng);
+                            } else {
+                                handleDeforestationAnalysis(latLng);
+                            }
+                        };
+
+                        root.render(<PopupContent coords={latLng} onConfirm={handleConfirm} />);
+                    }
                 });
-            }
 
-            map.on('click', (e: any) => {
-                 if (mode === 'trees' || mode === 'deforestation') {
-                    const { lat, lng } = e.latlng;
-                    const latLng = { lat, lng };
+                const drawnItems = new L.FeatureGroup();
+                map.addLayer(drawnItems);
 
-                    const popupContainer = document.createElement('div');
-                    const popup = L.popup()
-                        .setLatLng(latLng)
-                        .setContent(popupContainer)
-                        .openOn(map);
+                if (L.Control.Draw) {
+                    const drawControl = new L.Control.Draw({
+                        edit: { featureGroup: drawnItems, remove: false },
+                        draw: {
+                            polyline: false, circle: false, circlemarker: false, marker: false,
+                            polygon: { shapeOptions: { color: '#ec4899' } },
+                            rectangle: { shapeOptions: { color: '#ec4899' } },
+                        },
+                    });
+                    drawControlRef.current = drawControl;
+
+                    if (mode === 'locations' || mode === 'deforestation') {
+                        map.addControl(drawControl);
+                    }
+                }
+
+                map.on(L.Draw.Event.CREATED, (event: any) => {
+                    const type = event.layerType;
+                    const layer = event.layer;
+                    drawnItems.addLayer(layer);
                     
-                    const root = createRoot(popupContainer);
+                    let newPrompt = '';
+                    if (type === 'rectangle') {
+                        const bounds = layer.getBounds();
+                        const sw = bounds.getSouthWest();
+                        const ne = bounds.getNorthEast();
+                        newPrompt = t('siteSelector.drawPrompt')
+                            .replace('{swLat}', sw.lat.toFixed(4))
+                            .replace('{swLng}', sw.lng.toFixed(4))
+                            .replace('{neLat}', ne.lat.toFixed(4))
+                            .replace('{neLng}', ne.lng.toFixed(4));
+                    } else if (type === 'polygon') {
+                        const latLngs = layer.getLatLngs()[0];
+                        const vertices = latLngs.map((latlng: any) => `[${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}]`).join(', ');
+                        newPrompt = t('siteSelector.drawPolygonPrompt').replace('{vertices}', vertices);
+                    }
+                    
+                    if (newPrompt && mode === 'locations') {
+                        setLocationsInput(newPrompt);
+                        onFindLocations(newPrompt);
+                    } else if (mode === 'deforestation' && type !== 'marker') {
+                    const center = layer.getBounds().getCenter();
+                    const latLng = { lat: center.lat, lng: center.lng };
+                    setCoords(latLng);
+                    handleDeforestationAnalysis(latLng);
+                    }
+                });
 
-                    const handleConfirm = () => {
-                        setCoords(latLng);
-                        map.closePopup(popup);
-                        if (mode === 'trees') {
-                            onFindTrees(latLng);
-                        } else {
-                            handleDeforestationAnalysis(latLng);
-                        }
-                    };
-
-                    root.render(<PopupContent coords={latLng} onConfirm={handleConfirm} />);
-                }
-            });
-
-            const drawnItems = new L.FeatureGroup();
-            map.addLayer(drawnItems);
-
-            const drawControl = new L.Control.Draw({
-                edit: { featureGroup: drawnItems, remove: false },
-                draw: {
-                    polyline: false, circle: false, circlemarker: false, marker: false,
-                    polygon: { shapeOptions: { color: '#ec4899' } },
-                    rectangle: { shapeOptions: { color: '#ec4899' } },
-                },
-            });
-            drawControlRef.current = drawControl;
-
-            map.on(L.Draw.Event.CREATED, (event: any) => {
-                const type = event.layerType;
-                const layer = event.layer;
-                drawnItems.addLayer(layer);
-                
-                let newPrompt = '';
-                if (type === 'rectangle') {
-                    const bounds = layer.getBounds();
-                    const sw = bounds.getSouthWest();
-                    const ne = bounds.getNorthEast();
-                    newPrompt = t('siteSelector.drawPrompt')
-                        .replace('{swLat}', sw.lat.toFixed(4))
-                        .replace('{swLng}', sw.lng.toFixed(4))
-                        .replace('{neLat}', ne.lat.toFixed(4))
-                        .replace('{neLng}', ne.lng.toFixed(4));
-                } else if (type === 'polygon') {
-                    const latLngs = layer.getLatLngs()[0];
-                    const vertices = latLngs.map((latlng: any) => `[${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}]`).join(', ');
-                    newPrompt = t('siteSelector.drawPolygonPrompt').replace('{vertices}', vertices);
-                }
-                
-                if (newPrompt && mode === 'locations') {
-                    setLocationsInput(newPrompt);
-                    onFindLocations(newPrompt);
-                } else if (mode === 'deforestation' && type !== 'marker') {
-                   const center = layer.getBounds().getCenter();
-                   const latLng = { lat: center.lat, lng: center.lng };
-                   setCoords(latLng);
-                   handleDeforestationAnalysis(latLng);
-                }
-            });
-
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 100);
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            } catch (err) {
+                console.error("Map initialization failed in SiteSelector:", err);
+            }
         }
-    }, [t, onFindLocations, onFindTrees, setCoords, setLocationsInput, mode, handleDeforestationAnalysis]); 
+    }, [t, onFindLocations, onFindTrees, setCoords, setLocationsInput, mode, handleDeforestationAnalysis]);
 
     useEffect(() => {
         const map = mapInstanceRef.current;

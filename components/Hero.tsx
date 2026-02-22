@@ -122,34 +122,43 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
   
   useEffect(() => {
     if (mapRef.current && !mapInstanceRef.current && typeof L !== 'undefined') {
-        const map = L.map(mapRef.current, {
-            center: [15, 15],
-            zoom: 2,
-            scrollWheelZoom: false,
-            zoomControl: false,
-        });
-        mapInstanceRef.current = map;
+        try {
+            const map = L.map(mapRef.current, {
+                center: [15, 15],
+                zoom: 2,
+                scrollWheelZoom: false,
+                zoomControl: false,
+            });
+            mapInstanceRef.current = map;
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 10,
-        }).addTo(map);
-        
-        const mapIconSvg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="#10B981"><g><path d="M16 2.5c-4.96 0-8.99 4.03-8.99 8.99 0 1.95.62 3.75 1.68 5.24 0 .01 0 .01 0 .01.01.01.01.02.02.03C9.88 18.25 16 29.5 16 29.5s6.12-11.25 7.29-12.73c.01-.01.01-.02.02-.03 0 0 0-.01 0-.01 1.06-1.49 1.68-3.29 1.68-5.24C24.99 6.53 20.96 2.5 16 2.5zm0 12.25a3.26 3.26 0 110-6.52 3.26 3.26 0 010 6.52z"></path></g></svg>`;
-        const mapIcon = L.icon({
-            iconUrl: 'data:image/svg+xml;base64,' + btoa(mapIconSvg),
-            iconSize: [32, 32],
-            iconAnchor: [16, 32],
-            popupAnchor: [0, -32]
-        });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 10,
+            }).addTo(map);
+            
+            const mapIconSvg = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" fill="#10B981"><g><path d="M16 2.5c-4.96 0-8.99 4.03-8.99 8.99 0 1.95.62 3.75 1.68 5.24 0 .01 0 .01 0 .01.01.01.01.02.02.03C9.88 18.25 16 29.5 16 29.5s6.12-11.25 7.29-12.73c.01-.01.01-.02.02-.03 0 0 0-.01 0-.01 1.06-1.49 1.68-3.29 1.68-5.24C24.99 6.53 20.96 2.5 16 2.5zm0 12.25a3.26 3.26 0 110-6.52 3.26 3.26 0 010 6.52z"></path></g></svg>`;
+            const mapIcon = L.icon({
+                iconUrl: 'data:image/svg+xml;base64,' + btoa(mapIconSvg),
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
 
-        portfolioItems.forEach(item => {
-            if (item.latitude && item.longitude) {
-                const marker = L.marker([item.latitude, item.longitude], { icon: mapIcon }).addTo(map);
-                marker.bindPopup(`<b>${item.title}</b><p>${item.description.substring(0, 100)}...</p>`);
-            }
-        });
+            portfolioItems.forEach(item => {
+                if (item.latitude && item.longitude) {
+                    const marker = L.marker([item.latitude, item.longitude], { icon: mapIcon }).addTo(map);
+                    marker.bindPopup(`<b>${item.title}</b><p>${item.description.substring(0, 100)}...</p>`);
+                }
+            });
+            
+            // Force layout recalculation
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        } catch (error) {
+            console.error("Error initializing Leaflet map in Hero:", error);
+        }
     }
   }, [portfolioItems]);
 

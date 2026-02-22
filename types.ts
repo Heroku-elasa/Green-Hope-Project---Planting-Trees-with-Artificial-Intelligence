@@ -339,10 +339,6 @@ const translations: Record<string, any> = {
         },
         latLabelShort: "Lat",
         lngLabelShort: "Lng",
-        latitudePlaceholder: "e.g., 36.175683",
-        longitudePlaceholder: "e.g., 58.465929",
-        manualCoordsDefaultLat: "36.175683",
-        manualCoordsDefaultLng: "58.465929",
         mapLoading: "Loading map...",
         nearbyAnalysis: {
             title: "Nearby Analysis",
@@ -889,8 +885,6 @@ const translations: Record<string, any> = {
         },
         latLabelShort: "عرض",
         lngLabelShort: "طول",
-        latitudePlaceholder: "مثال: ۳۴.۰۵۲۲",
-        longitudePlaceholder: "مثال: ۵۳.۶۸۸۰",
         mapLoading: "در حال بارگذاری نقشه...",
         nearbyAnalysis: {
             title: "تحلیل مناطق نزدیک",

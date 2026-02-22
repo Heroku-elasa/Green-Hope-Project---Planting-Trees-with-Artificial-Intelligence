@@ -422,6 +422,10 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
     useEffect(() => {
         if (mapRef.current && !map) {
             try {
+                if (typeof L === 'undefined') {
+                    console.error("Leaflet (L) is undefined. Skipping map initialization.");
+                    return;
+                }
                 const newMap = L.map(mapRef.current, {
                     zoomControl: false,
                 }).setView([35.6892, 51.3890], 5);
@@ -436,24 +440,26 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                 const featureGroup = new L.FeatureGroup().addTo(newMap);
                 drawnItems.current = featureGroup;
 
-                new L.Control.Draw({
-                    position: 'topright',
-                    draw: {
-                        polygon: {
-                            shapeOptions: { color: '#10b981', weight: 2, opacity: 0.8, },
-                            allowIntersection: false,
+                if (L.Control.Draw) {
+                    new L.Control.Draw({
+                        position: 'topright',
+                        draw: {
+                            polygon: {
+                                shapeOptions: { color: '#10b981', weight: 2, opacity: 0.8, },
+                                allowIntersection: false,
+                            },
+                            polyline: false, circle: false, rectangle: false, marker: false, circlemarker: false,
                         },
-                        polyline: false, circle: false, rectangle: false, marker: false, circlemarker: false,
-                    },
-                    edit: { featureGroup: featureGroup, remove: true }
-                }).addTo(newMap);
+                        edit: { featureGroup: featureGroup, remove: true }
+                    }).addTo(newMap);
+                }
 
                 const handleAnalyzePolygon = async (layer: any) => {
                     clearAllDynamicMarkers();
                     const latlngs = layer.getLatLngs()[0].map((p: any) => ({ lat: p.lat, lng: p.lng }));
                     props.setIsLoading('areas');
                     try {
-                        const result = await analyzePolygonArea(latlngs, props.numberOfTrees, language, props.useGrounding);
+                        const result = await findPlantingAreas(latlngs, props.numberOfTrees, language, props.useGrounding);
                         setSuggestedAreas(result);
                         addToast(result.length > 0 ? `${result.length} suitable spots found.` : 'No suitable spots found.', result.length > 0 ? 'success' : 'info');
                     } catch (err) {
@@ -476,6 +482,19 @@ const GreenHopePage: React.FC<GreenHopePageProps> = (props) => {
                 });
 
                 newMap.on(L.Draw.Event.DELETED, () => {
+                    clearAllDynamicMarkers();
+                });
+
+                // Force layout recalculation
+                setTimeout(() => {
+                    newMap.invalidateSize();
+                }, 100);
+
+            } catch (err) {
+                console.error("Map initialization failed in HomePage:", err);
+            }
+        }
+    }, [mapRef, map, language, props, addToast, t, clearAllDynamicMarkers, mapTiles.satellite.attribution, mapTiles.satellite.url]);
                      clearAllDynamicMarkers();
                 });
 
