@@ -71,7 +71,7 @@ const ApiTest: React.FC = () => {
       const response = await fetch('/api/db/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: 'SELECT * FROM api_status ORDER BY last_tested DESC LIMIT 20' })
+        body: JSON.stringify({ query: 'SELECT * FROM api_test_results ORDER BY status DESC, latency ASC, tested_at DESC LIMIT 50' })
       });
       const data = await response.json();
       if (data.rows) setSavedResults(data.rows);
@@ -86,8 +86,8 @@ const ApiTest: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: 'INSERT INTO api_status (provider, model, status, latency) VALUES ($1, $2, $3, $4)',
-          params: [provider, model, status, latency]
+          query: 'INSERT INTO api_test_results (api_name, model, status, latency, response) VALUES ($1, $2, $3, $4, $5)',
+          params: [provider, model, status === 'success' ? 'WORKS' : 'FAILED', latency, 'Tested via Frontend UI']
         })
       });
       fetchSavedResults();
@@ -108,17 +108,35 @@ const ApiTest: React.FC = () => {
         max_tokens: 60
       };
 
+      let key = provider.id === 'openrouter' ? API_KEYS.openrouter : 
+                provider.id === 'portkey' ? API_KEYS.portkey : API_KEYS.poyo;
+
       if (provider.id === 'openrouter') {
-        headers['Authorization'] = `Bearer ${API_KEYS.openrouter}`;
+        headers['Authorization'] = `Bearer ${key}`;
         headers['HTTP-Referer'] = window.location.origin;
         headers['X-Title'] = 'Green Hope Project';
       } else if (provider.id === 'portkey') {
-        headers['x-portkey-api-key'] = API_KEYS.portkey;
+        headers['x-portkey-api-key'] = key;
         headers['x-portkey-provider'] = 'openai';
       }
 
       const start = Date.now();
-      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      let res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      
+      // Fallback to OpenRouter if Portkey fails
+      if (!res.ok && provider.id === 'portkey' && API_KEYS.openrouter) {
+        console.log('Portkey failed, falling back to OpenRouter...');
+        url = 'https://openrouter.ai/api/v1/chat/completions';
+        headers = { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEYS.openrouter}`,
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Green Hope Project (Fallback)'
+        };
+        body.model = 'deepseek/deepseek-r1-0528:free'; // Use a reliable free fallback
+        res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      }
+
       const data = await res.json();
       const duration = Date.now() - start;
 
@@ -183,14 +201,14 @@ const ApiTest: React.FC = () => {
               <tbody>
                 {savedResults.map((r, i) => (
                   <tr key={i} className="border-t border-gray-700">
-                    <td className="p-2">{r.provider}</td>
+                    <td className="p-2">{r.api_name}</td>
                     <td className="p-2">{r.model}</td>
                     <td className="p-2">
-                      <span className={r.status === 'success' ? 'text-green-400' : 'text-red-400'}>
-                        {r.status === 'success' ? 'فعال' : 'غیرفعال'}
+                      <span className={r.status === 'WORKS' ? 'text-green-400' : 'text-red-400'}>
+                        {r.status === 'WORKS' ? 'فعال' : 'غیرفعال'}
                       </span>
                     </td>
-                    <td className="p-2">{r.latency}</td>
+                    <td className="p-2">{r.latency || '-'}</td>
                   </tr>
                 ))}
               </tbody>

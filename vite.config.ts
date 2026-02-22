@@ -9,10 +9,13 @@ export default defineConfig(({ mode }) => {
         port: 5000,
         host: '0.0.0.0',
         allowedHosts: true,
-        hmr: {
-          clientPort: 443,
-          host: '071d2722-7ebb-4fea-b558-730777338ca2-00-rvjj40cqj1r3.picard.replit.dev',
-          protocol: 'wss'
+        cors: true,
+        proxy: {
+          '/api': {
+            target: 'http://0.0.0.0:5000',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/api/, '')
+          }
         }
       },
       plugins: [react()],

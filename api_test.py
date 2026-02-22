@@ -25,6 +25,7 @@ def init_db():
                 model TEXT,
                 status TEXT,
                 response TEXT,
+                latency INTEGER,
                 tested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -34,14 +35,14 @@ def init_db():
     except Exception as e:
         print(f"DB Init FAILED: {e}")
 
-def save_result(api_name, model, status, response_text):
+def save_result(api_name, model, status, response_text, latency=None):
     if not DATABASE_URL: return
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO api_test_results (api_name, model, status, response) VALUES (%s, %s, %s, %s)",
-            (api_name, model, status, response_text)
+            "INSERT INTO api_test_results (api_name, model, status, response, latency) VALUES (%s, %s, %s, %s, %s)",
+            (api_name, model, status, response_text, latency)
         )
         conn.commit()
         cur.close()
@@ -54,7 +55,7 @@ def get_saved_results():
     try:
         conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
-        cur.execute("SELECT api_name, model, status, response, tested_at FROM api_test_results ORDER BY status DESC, tested_at DESC")
+        cur.execute("SELECT api_name, model, status, response, latency, tested_at FROM api_test_results ORDER BY tested_at DESC")
         rows = cur.fetchall()
         cur.close()
         conn.close()
@@ -72,6 +73,8 @@ def test_models(client, models, api_name, key_short):
         print(f"Testing {api_name} model '{model}' with key {key_short}...")
         status = "FAILED"
         resp_text = ""
+        latency = None
+        start_time = time.time()
         try:
             # Create a separate client instance for Portkey to avoid modifying global state
             test_client = client
@@ -87,16 +90,17 @@ def test_models(client, models, api_name, key_short):
                 messages=[{"role": "user", "content": f"Say 'Test OK for {model}'"}],
                 max_tokens=20
             )
+            latency = int((time.time() - start_time) * 1000)
             status = "WORKS"
             resp_text = response.choices[0].message.content.strip()
-            print(f"SUCCESS: {model} works! Response: {resp_text}")
+            print(f"SUCCESS: {model} works! Response: {resp_text} ({latency}ms)")
         except Exception as e:
             status = f"FAILED: {str(e)}"
             resp_text = str(e)
             print(status)
         
         results[model] = status
-        save_result(api_name, model, status, resp_text)
+        save_result(api_name, model, status, resp_text, latency)
     return results
 
 # ────────────────────────────────────────────────
@@ -135,8 +139,6 @@ def test_openrouter(key):
         "qwen/qwen-2-7b-instruct:free",
         "deepseek/deepseek-r1:free"
     ]
-    # Test half of them
-    test_count = len(models)
     return test_models(client, models, "OpenRouter", key[:10] + "...")
 
 def test_poyo(key):
@@ -147,10 +149,12 @@ def test_poyo(key):
         print(f"Testing Poyo model '{model}'...")
         status = "FAILED"
         resp_text = ""
+        start_time = time.time()
+        latency = None
         try:
-            # Poyo often uses standard generation endpoints
             payload = {"model": model, "prompt": "Test circle"}
             resp = requests.post("https://api.poyo.ai/v1/images/generations", headers=headers, json=payload, timeout=15)
+            latency = int((time.time() - start_time) * 1000)
             if resp.status_code == 200:
                 status = "WORKS"
                 resp_text = "Success"
@@ -160,33 +164,38 @@ def test_poyo(key):
         except Exception as e:
             status = f"FAILED: {str(e)}"
             resp_text = str(e)
-        save_result("Poyo", model, status, resp_text)
-        print(f"{model}: {status}")
+        save_result("Poyo", model, status, resp_text, latency)
+        print(f"{model}: {status} ({latency if latency else 'N/A'}ms)")
 
 # ────────────────────────────────────────────────
-# Keys
+# Keys (Feb 22, 2026)
 # ────────────────────────────────────────────────
-PORTKEY_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU"
-POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79"
-OPENROUTER_KEY = "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"
+PORTKEY_KEY = os.environ.get("PORTKEY_API_KEY", "ST4fIU5r6s6JvLGE/ad2F+8CCCrU")
+POYO_KEY = os.environ.get("POYO_API_KEY", "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79")
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "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")
+# Fallback keys if environment variables are missing
+if not PORTKEY_KEY: PORTKEY_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU"
+if not POYO_KEY: POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79"
+if not OPENROUTER_KEY: OPENROUTER_KEY = "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"
 
 if __name__ == "__main__":
     init_db()
-    print("Starting DEEP API TEST...")
+    print("Starting DEEP API TEST (Feb 22, 2026)...")
     
     print("\n[PREVIOUS RESULTS]")
     saved = get_saved_results()
     for row in saved:
-        print(f"[{row[4]}] {row[0]} - {row[1]}: {row[2]}")
+        print(f"[{row[5]}] {row[0]} - {row[1]}: {row[2]} ({row[4]}ms)")
     
     test_portkey(PORTKEY_KEY)
     test_poyo(POYO_KEY)
     test_openrouter(OPENROUTER_KEY)
     
-    print("\n[FINAL WORKABLE MODELS]")
+    print("\n[WORKABLE MODELS SORTED BY LATENCY]")
     all_results = get_saved_results()
-    for row in all_results:
-        if "WORKS" in row[2]:
-            print(f"✅ {row[0]} | {row[1]} | {row[2]}")
+    workable = [r for r in all_results if r[2] == "WORKS" and r[4] is not None]
+    workable.sort(key=lambda x: x[4])
+    for row in workable:
+        print(f"✅ {row[0]} | {row[1]} | {row[4]}ms")
     
     print("\nDone.")

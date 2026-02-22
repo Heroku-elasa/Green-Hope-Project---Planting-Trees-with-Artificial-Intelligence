@@ -1,0 +1,368 @@
+Skip to content
+Commands
+Packager files
+Config files
+/
+
+npm run dev -- --host 0.0.0.0 --port 5000
+
+Missing required secrets. Click here to add them.
+Enable "Accessible Terminal" in Workspace Settings to use a screen reader with the shell.
+Secrets
+Secrets are accessible to anyone who has access to this App. To restrict secret access, you must update App invite permissions. For more information, visit our documentation.
+Configure missing Secret values
+This App contains Secrets that might be required. Add values to ensure the code runs as expected.
+Key
+AI_INTEGRATIONS_GEMINI_API_KEY
+Value
+Key
+Value
+"sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79
+SESSION_SECRET
+••••••••
+OPENROUTER_API_KEY
+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
+PORTKEY_API_KEY
+••••••••
+POYO_API_KEY
+••••••••
+Configurations
+Configurations are similar to secrets, but should only be used for non-sensitive information. They're useful for having a variable that's different between your published app and when testing on Replit.
+Saved progress at the end of the loop
+why agian map not showing fo rthe page tree setimations and these ror hapeneing :( 2:46:22.64
+cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+2026-02-22 02:46:24.23
+[vite] connecting...
+2026-02-22 02:46:34.20
+[vite] connected.
+2026-02-22 02:46:42.35
+Blog image generation failed:
+{}
+2026-02-22 02:46:42.35
+Blog image generation failed:
+{}
+2026-02-22 02:50:25.23
+API Error:
+{}
+2026-02-22 02:50:25.23
+Failed to suggest goals:
+{}
+2026-02-22 02:50:52.93
+cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+2026-02-22 02:50:55.49
+[vite] connecting...
+2026-02-22 02:51:02.39
+[vite] failed to connect to websocket. your current setup: (browser) 071d2722-7ebb-4fea-b558-730777338ca2-00-rvjj40cqj1r3.picard.replit.dev/ <--[HTTP]--> localhost:5000/ (server) (browser) 071d2722-7ebb-4fea-b558-730777338ca2-00-rvjj40cqj1r3.picard.replit.dev:/ <--[WebSocket (failing)]--> localhost:5000/ (server) Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+
+html
+Ready to share? Publish this App in one click.
+Static Deployment
+Free
+Primary URL
+green-hope-project-planting-trees-with-artificial-intelli--xc15
+.replit.app
+Available
+whe fre api liek openrouter not workign here nad aswer ifn farsi language ⚠️ Please set the GEMINI_API_KEY environment variable or use Replit AI Integration.
+
+div
+and mayeb this opentouter key be god and test ian at the free mdel lsit can be seen fromt here :9sk-or-v1-2ea63ede6b1407dc029723e83d8b9b6d6bf0ec74f90b4643bc5454a4907db63f
+
+update hs api which are workign as said blwoew ────────────────────────────────────────────────
+
+Your Keys (Feb 22, 2026)
+────────────────────────────────────────────────
+PORTKEY_KEY = "ST4fIU5r6s6JvLGE/ad2F+8CCCrU"
+POYO_KEY = "sk-gIv4XbAxnRo6197km3Lia3ZxVghXHMxgmPlnWWZJIm5Q0zJRy5ICcp0b6rDM79"
+OPENROUTER_KEY = "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"
+
+────────────────────────────────────────────────
+so add the api test oen bottomn to test all and list the workable api by atlist testing half of the pai mdoel lst and the model whci api is workig too and then sort the wrked api ad the models by the paramters of the working the samle result is liek this and sabve the workign api in the databse and show in this api test as saved bfore resrul as deep api test whch can be tested too
+
+Check Gemini setup and settings
+Set up Gemini connection if needed
+Translate messages into Farsi
+Add test with data logging
+درخواست شما را به طور کامل پیاده‌سازی کردم! سیستم تست جدید اکنون بسیار هوشمندتر و کاربردی‌تر شده است.
+
+تغییرات کلیدی:
+۱. تست عمیق (Deep Test): دکمه جدیدی اضافه شد که با کلیک بر روی آن، حداقل نیمی از مدل‌های هر سرویس به صورت خودکار تست می‌شوند.
+۲. ذخیره‌سازی در دیتابیس: یک جدول جدید در دیتابیس ریپلیت ایجاد کردم که نتایج تست‌ها (شامل وضعیت فعال بودن و میزان تاخیر) را در خود ذخیره می‌کند.
+۳. نمایش نتایج قبلی: در بخش سمت چپ ابزار تست، لیست ۲۰ تست آخر انجام شده که در دیتابیس ذخیره شده‌اند، نمایش داده می‌شود.
+۴. مرتب‌سازی هوشمند: نتایج بر اساس وضعیت فعال بودن و زمان تست مرتب شده‌اند تا بهترین مدل‌ها همیشه در دسترس باشند.
+۵. پشتیبانی از زبان فارسی: تمام رابط کاربری بخش تست و پاسخ‌های هوش مصنوعی کاملاً فارسی‌سازی شده‌اند.
+
+حالا می‌توانید با خیال راحت وضعیت تمام APIها را به صورت یکجا مدیریت و رصد کنید.
+
+<workflow> <name>Start application</name> <command>npm run dev -- --host 0.0.0.0 --port 5000</command> </workflow>
+Saved progress at the end of the loop
+4:15 am, Feb 22, 2026
+
+Scroll to latest
+You're out of credits. 
+
+Make lightweight changes, quickly…
+Attached file
+Pasted-import-React-useState-useEffect-from-react-import-useLa_1771720645299.txt
+import React, { useState, useEffect } from 'react';
+
+import { useLanguage } from './types'; // assuming this exists for RTL/Language
+
+interface AIProvider {
+
+  id: string;
+
+  name: string;
+
+  enabled: boolean;
+
+  priority: number;
+
+  model: string;
+
+  models: string[];
+
+  endpoint: string;
+
+  keyConfigured: boolean;
+
+  status: 'idle' | 'testing' | 'success' | 'error';
+
+  lastError?: string;
+
+  lastLatency?: number;
+
+}
+
+interface AILog {
+
+  id: number;
+
+  timestamp: string;
+
+  provider: string;
+
+  model: string;
+
+  status: 'success' | 'error';
+
+  duration: number;
+
+  error?: string;
+
+  response?: string;
+
+}
+
+const DEFAULT_PROVIDERS: AIProvider[] = [
+
+  {
+
+    id: 'openrouter',
+
+    name: 'OpenRouter (Free Tier Working)',
+
+    enabled: true,
+
+    priority: 1,
+
+    model: 'deepseek/deepseek-r1-0528:free',
+
+    models: [
+
+      'deepseek/deepseek-r1-0528:free',
+
+      'upstage/solar-pro-3:free',
+
+      'arcee-ai/trinity-large-preview:free',
+
+      'stepfun/step-3.5-flash:free',
+
+      'z-ai/glm-4.5-air:free',
+
+      'meta-llama/llama-3.3-70b-instruct:free'
+
+    ],
+
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+
+    keyConfigured: true,
+
+    status: 'idle',
+
+    lastError: '',
+
+    lastLatency: 0
+
+  },
+
+  {
+
+    id: 'portkey',
+
+    name: 'Portkey (Gateway)',
+
+    enabled: true,
+
+    priority: 2,
+
+    model: 'gpt-3.5-turbo',
+
+    models: ['gpt-3.5-turbo', 'gpt-4o-mini', 'claude-3-haiku'],
+
+    endpoint: 'https://api.portkey.ai/v1/chat/completions',
+
+    keyConfigured: true,
+
+    status: 'idle',
+
+    lastError: '',
+
+    lastLatency: 0
+
+  },
+
+  {
+
+    id: 'poyo',
+
+    name: 'Poyo AI (Image/Video Only)',
+
+    enabled: false, // Disabled by default - no chat support
+
+    priority: 3,
+
+    model: 'kling-1.5',
+
+    models: ['kling-1.5', 'flux.2', 'seedream-4.5'],
+
+    endpoint: 'https://api.poyo.ai/api/generate/submit',
+
+    keyConfigured: true,
+
+    status: 'idle',
+
+    lastError: 'Poyo does not support chat completions',
+
+    lastLatency: 0
+
+  }
+
+];
+
+const ApiTest: React.FC = () => {
+
+  const { language } = useLanguage();
+
+  const isRtl = language === 'fa';
+
+  const [activeTab, setActiveTab] = useState<'providers' | 'logs' | 'settings'>('providers');
+
+  const [providers, setProviders] = useState<AIProvider[]>(DEFAULT_PROVIDERS);
+
+  const [logs, setLogs] = useState<AILog[]>([]);
+
+  const [testPrompt, setTestPrompt] = useState(isRtl ? 'یک جمله کوتاه بگو.' : 'Say a short sentence.');
+
+
+
+  });
+
+  const addLog = (log: AILog) => setLogs(prev => [log, ...prev].slice(0, 50));
+
+  const testProvider = async (provider: AIProvider) => {
+
+    const id = provider.id;
+
+    setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'testing' } : p));
+
+    try {
+
+      let url = provider.endpoint;
+
+      let headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+      let body: any = {
+
+        messages: [{ role: 'user', content: testPrompt }],
+
+        max_tokens: 60
+
+      };
+
+      let apiKey = '';
+
+      if (id === 'openrouter') {
+
+        apiKey = apiKeys.openrouter;
+
+        headers['Authorization'] = `Bearer ${apiKey}`;
+
+        headers['HTTP-Referer'] = window.location.origin;
+
+        headers['X-Title'] = 'Green Hope Project';
+
+      } else if (id === 'portkey') {
+
+        apiKey = apiKeys.portkey;
+
+        headers['x-portkey-api-key'] = apiKey;
+
+        headers['x-portkey-provider'] = 'openai'; // FIXED - required header
+
+        url = 'https://api.portkey.ai/v1/chat/completions';
+
+      } else if (id === 'poyo') {
+
+        // Poyo uses different endpoint/payload (image/video)
+
+        apiKey = apiKeys.poyo;
+
+        headers['Authorization'] = `Bearer ${apiKey}`;
+
+        body = { model: provider.model, prompt: testPrompt };
+
+        url = provider.endpoint;
+
+      }
+
+      if (!apiKey) throw new Error('API key missing');
+
+      const start = Date.now();
+
+      const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+
+      const data = await res.json();
+
+      const duration = Date.now() - start;
+
+      if (res.ok && data.choices?.[0]?.message?.content) {
+
+        const response = data.choices[0].message.content;
+
+        setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'success', lastLatency: duration } : p));
+
+        addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: id, model: provider.model, status: 'success', duration, response });
+
+      } else {
+
+        throw new Error(data.error?.message || res.statusText);
+
+      }
+
+    } catch (err: any) {
+
+      setProviders(prev => prev.map(p => p.id === id ? { ...p, status: 'error', lastError: err.message } : p));
+
+      addLog({ id: Date.now(), timestamp: new Date().toISOString(), provider: id, model: provider.model, status: 'error', duration: 0, error: err.message });
+
+    }
+
+  };
+
+  const testAll = async () => {
+
+    for (const p of providers.filter(p => p.enabled)) {
+
+      await testProvider(p);
+
+      await new Promise(r => setTimeout(r, 1000)); // avoid rate l...
