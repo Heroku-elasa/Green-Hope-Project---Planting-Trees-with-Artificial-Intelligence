@@ -4,6 +4,7 @@ import { Grant, GrantSummary, PlantingSite, SuitableTree, EconomicBenefitAnalysi
 import PoYoClient from '../lib/poyoClient';
 
 const poyo = process.env.POYO_API_KEY ? new PoYoClient({ apiKey: process.env.POYO_API_KEY }) : null;
+const OPENROUTER_API_KEY = "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";
 
 let _ai: GoogleGenAI | null = null;
 function getAI(): GoogleGenAI {
@@ -18,9 +19,16 @@ function getAI(): GoogleGenAI {
                 apiVersion: "v1beta",
                 baseUrl: replitBaseUrl
             };
+        } else if (OPENROUTER_API_KEY) {
+             // Fallback to OpenRouter if no Gemini key
+             options.apiKey = OPENROUTER_API_KEY;
+             options.httpOptions = {
+                 apiVersion: "v1",
+                 baseUrl: "https://openrouter.ai/api/v1"
+             };
         } else {
             if (!apiKey) {
-                throw new Error('Please set the GEMINI_API_KEY environment variable or use Replit AI Integration.');
+                throw new Error('لطفاً کلید API را تنظیم کنید یا از سیستم داخلی استفاده کنید. (Please set API key)');
             }
             options.httpOptions = {
                 apiVersion: "v1beta"
@@ -42,9 +50,9 @@ export interface ChatResponse {
 }
 
 export const performSearch = async (query: string): Promise<SearchResultItem[]> => {
-    const systemInstruction = `Search assistant for Green Hope Project.`;
+    const systemInstruction = `Search assistant for Green Hope Project. Respond in Persian/Farsi if the query is in Farsi.`;
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: OPENROUTER_API_KEY ? 'google/gemini-2.0-flash-001' : 'gemini-2.0-flash',
         contents: `User query: "${query}"`,
         config: {
             systemInstruction,
@@ -68,10 +76,10 @@ export const performSearch = async (query: string): Promise<SearchResultItem[]> 
 
 export const getChatResponseWithFollowups = async (systemInstruction: string, history: Content[], latestMessage: string): Promise<ChatResponse> => {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: OPENROUTER_API_KEY ? 'google/gemini-2.0-flash-001' : 'gemini-2.0-flash',
         contents: [...history, { role: 'user', parts: [{ text: latestMessage }] }],
         config: {
-            systemInstruction,
+            systemInstruction: systemInstruction + " Respond in Persian/Farsi.",
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.OBJECT,
@@ -88,8 +96,8 @@ export const getChatResponseWithFollowups = async (systemInstruction: string, hi
 
 export const generateReport = async (topic: string, description: string, reportType: string): Promise<GroundedResult> => {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Generate ${reportType} report for ${topic}: ${description}`,
+        model: OPENROUTER_API_KEY ? 'google/gemini-2.0-flash-001' : 'gemini-2.0-flash',
+        contents: `Generate ${reportType} report for ${topic}: ${description}. Write the report in Persian/Farsi.`,
         config: { tools: [{ googleSearch: {} }] }
     });
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
@@ -98,8 +106,8 @@ export const generateReport = async (topic: string, description: string, reportT
 
 export const findGrants = async (keywords: string): Promise<Grant[]> => {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Find grants for: ${keywords}`,
+        model: OPENROUTER_API_KEY ? 'google/gemini-2.0-flash-001' : 'gemini-2.0-flash',
+        contents: `Find grants for: ${keywords}. Return results in Persian/Farsi where appropriate.`,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -142,9 +150,9 @@ export const analyzeGrant = async (grant: Grant, userProfile: string): Promise<G
     return JSON.parse(text);
 };
 
-export const findPlantingSites = async (description: string, language: string = 'en'): Promise<PlantingSite[]> => {
+export const findPlantingSites = async (description: string, language: string = 'fa'): Promise<PlantingSite[]> => {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: OPENROUTER_API_KEY ? 'google/gemini-2.0-flash-001' : 'gemini-2.0-flash',
         contents: description,
         config: {
             systemInstruction: `Identify planting sites. Language: ${language}`,
