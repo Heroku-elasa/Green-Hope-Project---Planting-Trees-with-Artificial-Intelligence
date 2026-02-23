@@ -14,6 +14,7 @@ import TeamPage from './components/TeamPage';
 import FunctionDocsPage from './components/FunctionDocsPage';
 import BlogGenerator from './components/BlogGenerator';
 import CompostingPage from './components/CompostingPage';
+import Marketplace from './components/Marketplace';
 import ApiTest from './ApiTest';
 import AdminPanel from './components/admin/AdminPanel';
 import QuotaErrorModal from './components/QuotaErrorModal';
@@ -572,6 +573,8 @@ const App: React.FC = () => {
             case 'imageEditor': return <ImageEditor originalImage={originalImage} setOriginalImage={setOriginalImage} editedImage={editedImage} editPrompt={editPrompt} setEditPrompt={setEditPrompt} onEditImage={handleEditImage} isEditing={isEditingImage} error={error} />;
             case 'blog': return <BlogGenerator />;
             case 'composting': return <CompostingPage />;
+            case 'marketplace': return <Marketplace />;
+            case 'investment': return <Marketplace />;
             case 'aiAssistant': return <ProgressTracker data={progressData} onSetSoberStartDate={handleSetSoberStartDate} onAddGoal={handleAddGoal} onToggleGoal={handleToggleGoal} onDeleteGoal={handleDeleteGoal} onDailyCheckin={handleDailyCheckin} />;
             default: return <HomePage setPage={setPage} />;
         }

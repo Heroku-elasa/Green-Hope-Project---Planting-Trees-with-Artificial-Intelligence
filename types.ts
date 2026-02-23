@@ -16,7 +16,9 @@ const translations: Record<string, any> = {
       projects: "Projects", 
       team: "Team", 
       docs: "Function Docs",
-      apiTest: "API Test"
+      apiTest: "API Test",
+      marketplace: "Marketplace",
+      investment: "Investment"
     },
     hero: {
         title: "Planting a Greener Tomorrow<br/> with Artificial Intelligence",
@@ -1170,7 +1172,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 };
 
 // --- App State ---
-export type Page = 'home' | 'projects' | 'team' | 'docs' | 'generator' | 'grant' | 'siteSelector' | 'video' | 'blog' | 'imageEditor' | 'composting' | 'aiAssistant';
+export type Page = 'home' | 'projects' | 'team' | 'docs' | 'generator' | 'grant' | 'siteSelector' | 'video' | 'blog' | 'imageEditor' | 'composting' | 'aiAssistant' | 'marketplace' | 'investment';
 
 export interface AppState {
   page: Page;

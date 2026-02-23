@@ -19,6 +19,8 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
 
   const navItems: { page: Page; labelKey: string }[] = [
     { page: 'home', labelKey: 'nav.home' },
+    { page: 'marketplace', labelKey: 'nav.marketplace' },
+    { page: 'investment', labelKey: 'nav.investment' },
     { page: 'generator', labelKey: 'nav.reportGenerator' },
     { page: 'grant', labelKey: 'nav.grantFinder' },
     { page: 'siteSelector', labelKey: 'nav.siteSelector' },
@@ -27,6 +29,8 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
     { page: 'blog', labelKey: 'nav.blogGenerator' },
     { page: 'composting', labelKey: 'nav.compostingGuide' },
     { page: 'aiAssistant', labelKey: 'nav.aiAssistant' },
+    { page: 'marketplace', labelKey: 'nav.marketplace' },
+    { page: 'investment', labelKey: 'nav.investment' },
     { page: 'projects', labelKey: 'nav.projects' },
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
