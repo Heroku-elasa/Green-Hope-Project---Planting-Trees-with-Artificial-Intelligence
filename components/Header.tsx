@@ -19,6 +19,7 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
 
   const navItems: { page: Page; labelKey: string }[] = [
     { page: 'home', labelKey: 'nav.home' },
+    { page: 'landEstimation', labelKey: 'nav.landEstimation' },
     { page: 'marketplace', labelKey: 'nav.marketplace' },
     { page: 'investment', labelKey: 'nav.investment' },
     { page: 'generator', labelKey: 'nav.reportGenerator' },
@@ -33,7 +34,6 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
     { page: 'api-test', labelKey: 'nav.apiTest' },
-    { page: 'landEstimation', labelKey: 'nav.landEstimation' },
   ];
   
   const handleLanguageChange = (lang: 'en' | 'fa') => {
@@ -102,24 +102,24 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
 
-             <div className="hidden md:block">
+             <div className="hidden xl:block">
                 {user ? (
                     <div className="relative" ref={profileMenuRef}>
-                        <button onClick={() => setIsProfileMenuOpen(prev => !prev)} className="flex items-center space-x-2 rounded-full hover:ring-2 hover:ring-pink-500 transition-all">
-                            <img src={user.picture} alt={user.name} className="w-9 h-9 rounded-full" />
+                        <button onClick={() => setIsProfileMenuOpen(prev => !prev)} className="flex items-center space-x-2 rounded-full hover:ring-2 hover:ring-pink-500 transition-all shadow-lg">
+                            <img src={user.picture} alt={user.name} className="w-9 h-9 rounded-full border border-white/10" />
                         </button>
                         {isProfileMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-64 bg-slate-800 rounded-md shadow-lg z-20 border border-slate-700 animate-fade-in">
-                                <div className="p-4 border-b border-slate-700 flex items-center space-x-3">
+                            <div className="absolute right-0 mt-2 w-64 bg-slate-900 rounded-2xl shadow-2xl z-20 border border-white/5 animate-fade-in p-2">
+                                <div className="p-4 border-b border-white/5 flex items-center space-x-3 mb-1">
                                     <img src={user.picture} alt={user.name} className="w-10 h-10 rounded-full" />
                                     <div>
-                                        <p className="font-semibold text-white truncate">{user.name}</p>
-                                        <p className="text-sm text-gray-400 truncate">{user.email}</p>
+                                        <p className="font-bold text-white truncate text-sm">{user.name}</p>
+                                        <p className="text-xs text-slate-500 truncate">{user.email}</p>
                                     </div>
                                 </div>
-                                <ul className="py-1 text-white">
-                                    <li className="flex items-center px-4 py-2 hover:bg-slate-700 cursor-pointer text-sm" onClick={handleLogoutClick}>
-                                         <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                                <ul className="py-1">
+                                    <li className="flex items-center px-4 py-2.5 hover:bg-white/5 rounded-xl cursor-pointer text-sm font-bold text-slate-300 transition-colors" onClick={handleLogoutClick}>
+                                         <svg className="w-4 h-4 mr-3 text-pink-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                                         Sign Out
                                     </li>
                                 </ul>
@@ -127,16 +127,16 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
                         )}
                     </div>
                 ) : (
-                    <button onClick={onLoginClick} className="px-4 py-2 bg-pink-600 text-white text-sm font-semibold rounded-md hover:bg-pink-700 transition-colors">
-                        Login / Sign Up
+                    <button onClick={onLoginClick} className="px-6 py-2.5 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-sm font-black rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl">
+                        Get Started
                     </button>
                 )}
              </div>
              
-             <div className="md:hidden ml-4">
+             <div className="xl:hidden ml-4">
                 <button 
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
-                  className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                  className="inline-flex items-center justify-center p-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-900 border border-white/5 focus:outline-none transition-all"
                   aria-controls="mobile-menu"
                   aria-expanded={isMobileMenuOpen}
                 >
@@ -157,41 +157,42 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
       </div>
       
       {isMobileMenuOpen && (
-        <nav className="md:hidden" id="mobile-menu">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <nav className="xl:hidden border-t border-white/5 bg-slate-950/95 backdrop-blur-2xl" id="mobile-menu">
+          <div className="px-4 pt-4 pb-6 space-y-2">
              {navItems.map(item => (
                 <button
                   key={item.page}
                   onClick={() => handleNavClick(item.page)}
-                  className={`w-full text-left block px-3 py-2 rounded-md text-base font-medium transition-colors ${currentPage === item.page ? 'bg-slate-700 text-pink-300' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                  className={`w-full text-left block px-4 py-3 rounded-xl text-base font-bold transition-all ${currentPage === item.page ? 'bg-pink-600/10 text-pink-400 border border-pink-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                   aria-current={currentPage === item.page ? 'page' : undefined}
                 >
                   {t(item.labelKey)}
                 </button>
               ))}
           </div>
-          <div className="px-4 py-3 border-t border-slate-700">
+          <div className="px-6 py-6 border-t border-white/5 bg-slate-900/30">
             {user ? (
                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center space-x-3">
-                        <img src={user.picture} alt={user.name} className="w-10 h-10 rounded-full" />
+                    <div className="flex items-center space-x-4">
+                        <img src={user.picture} alt={user.name} className="w-12 h-12 rounded-full border border-white/10" />
                         <div>
-                            <p className="font-semibold text-white truncate">{user.name}</p>
-                            <p className="text-sm text-gray-400 truncate">{user.email}</p>
+                            <p className="font-bold text-white truncate">{user.name}</p>
+                            <p className="text-xs text-slate-500 truncate">{user.email}</p>
                         </div>
                     </div>
-                    <button onClick={handleLogoutClick} className="text-gray-400 hover:text-white">
+                    <button onClick={handleLogoutClick} className="p-3 bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors">
                         <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                     </button>
                 </div>
             ) : (
-                 <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="w-full px-4 py-2 bg-pink-600 text-white text-base font-semibold rounded-md hover:bg-pink-700 transition-colors">
-                    Login / Sign Up
+                 <button onClick={() => { onLoginClick(); setIsMobileMenuOpen(false); }} className="w-full px-6 py-4 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-lg font-black rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
+                    Get Started
                 </button>
             )}
             </div>
         </nav>
       )}
+    </header>
     </header>
   );
 };

@@ -181,18 +181,19 @@ const HomePage: React.FC<HomePageProps> = ({ setPage }) => {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 tracking-tight"
               dangerouslySetInnerHTML={{ __html: t('hero.title') }} />
           <p className="mt-4 text-lg text-gray-300 max-w-2xl mx-auto">{t('hero.subtitle')}</p>
-          <div className="mt-8 flex justify-center gap-4">
+          <div className="mt-8 flex justify-center gap-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <button
-              onClick={() => setPage('projects')}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 via-purple-700 to-pink-700 text-white font-semibold rounded-md shadow-lg hover:scale-105 transition-transform"
+              onClick={() => setPage('landEstimation')}
+              className="px-8 py-3 bg-gradient-to-r from-pink-600 to-purple-600 text-white font-black rounded-xl shadow-xl hover:scale-105 transition-transform flex items-center group"
             >
-              {t('hero.button1')}
+              {t('landEstimation.title')}
+              <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
             </button>
             <button
-              onClick={() => handleScrollTo('footer')}
-              className="px-8 py-3 bg-slate-700/50 border border-slate-600 text-white font-semibold rounded-md shadow-lg hover:bg-slate-700 transition-colors"
+              onClick={() => setPage('projects')}
+              className="px-8 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white font-black rounded-xl shadow-lg hover:bg-white/20 transition-all"
             >
-              {t('hero.button2')}
+              {t('hero.button1')}
             </button>
           </div>
         </div>
