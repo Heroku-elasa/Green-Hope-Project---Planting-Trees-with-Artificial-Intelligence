@@ -29,8 +29,6 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
     { page: 'blog', labelKey: 'nav.blogGenerator' },
     { page: 'composting', labelKey: 'nav.compostingGuide' },
     { page: 'aiAssistant', labelKey: 'nav.aiAssistant' },
-    { page: 'marketplace', labelKey: 'nav.marketplace' },
-    { page: 'investment', labelKey: 'nav.investment' },
     { page: 'projects', labelKey: 'nav.projects' },
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
