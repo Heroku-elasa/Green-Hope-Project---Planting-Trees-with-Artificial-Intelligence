@@ -38,6 +38,11 @@ const translations: Record<string, any> = {
         recommendation: "AI Recommendation"
       }
     },
+    themes: {
+      title: "Theme Selection",
+      default: "Default (Modern)",
+      green: "Smart Green (Agricultural)",
+    },
     hero: {
         title: "Planting a Greener Tomorrow<br/> with Artificial Intelligence",
         subtitle: "We leverage AI and data science to optimize reforestation projects, secure funding, and right global awareness for a sustainable future.",

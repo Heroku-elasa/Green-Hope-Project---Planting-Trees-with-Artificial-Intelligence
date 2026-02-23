@@ -1,0 +1,72 @@
+<!-- ==================== HTML ==================== -->
+<html lang="en"><head><style>body {transition: opacity ease-in 0.2s; } 
+body[unresolved] {opacity: 0; display: block; overflow: hidden; position: relative; } 
+</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <iframe id="contentFrame" src="https://app.emergent.sh/loading-preview?host=smart-farm-share.cluster-3.preview.emergentcf.cloud" allowfullscreen=""></iframe>
+    <script>
+        // Listen for messages from the iframe
+        window.addEventListener('message', function(event) {
+
+        	console.log(event.origin);
+            // Optional: Add origin check for security
+            // if (!['https://dev.emergentagent.com', 'https://app.emergent.sh'].includes(event.origin)) return;
+
+            if (event.data && event.data.type === 'reload') {
+                const iframe = document.getElementById('contentFrame');
+                window.location.reload();
+            }
+
+            if (event.data && event.data.type === 'url') {
+                const iframe = document.getElementById('contentFrame');
+                window.open(event.data.url, '_blank');
+            }
+        });
+    </script>
+
+<veepn-lock-screen><style>@font-face{font-family:FigtreeVF;src:url(chrome-extension://majdfhpaihoncoakbjgbdhglocklcgno/fonts/FigtreeVF.woff2) format("woff2 supports variations"),url(chrome-extension://majdfhpaihoncoakbjgbdhglocklcgno/fonts/FigtreeVF.woff2) format("woff2-variations");font-weight:100 1000;font-display:swap}</style></veepn-lock-screen><div id="extension-pddjl"></div></body></html>
+
+/* ==================== CSS ==================== */
+body { transition: opacity 0.2s ease-in; }
+body[unresolved] { opacity: 0; display: block; overflow: hidden; position: relative; }
+
+body { margin: 0px; padding: 0px; overflow: hidden; height: 100vh; }
+iframe { width: 100%; height: 100%; border: none; }
+
+@font-face { font-family: FigtreeVF; src: url("chrome-extension://majdfhpaihoncoakbjgbdhglocklcgno/fonts/FigtreeVF.woff2") format("woff2-variations"); font-weight: 100 1000; font-display: swap; }
+
+// ==================== JavaScript ====================
+// Listen for messages from the iframe
+        window.addEventListener('message', function(event) {
+
+        	console.log(event.origin);
+            // Optional: Add origin check for security
+            // if (!['https://dev.emergentagent.com', 'https://app.emergent.sh'].includes(event.origin)) return;
+
+            if (event.data && event.data.type === 'reload') {
+                const iframe = document.getElementById('contentFrame');
+                window.location.reload();
+            }
+
+            if (event.data && event.data.type === 'url') {
+                const iframe = document.getElementById('contentFrame');
+                window.open(event.data.url, '_blank');
+            }
+        });
