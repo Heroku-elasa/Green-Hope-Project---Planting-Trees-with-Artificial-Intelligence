@@ -488,6 +488,30 @@ export const generateBlogImage = async (prompt: string): Promise<string> => {
     return `https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&q=80&w=1000`;
 };
 
+export const estimateLandValue = async (location: string, envTarget: string, finTarget: string, famTarget: string, language: string = 'fa'): Promise<any> => {
+    const systemInstruction = `You are a land valuation expert and environmental consultant. Evaluate the land potential based on the provided targets. Respond in ${language === 'fa' ? 'Persian/Farsi' : 'English'}.`;
+    const prompt = `Location: ${location}\nEnvironmental Target: ${envTarget}\nFinancial Target: ${finTarget}\nFamily Target: ${famTarget}\n\nProvide a JSON object with: score (0-100), rationale (text), and recommendation (text).`;
+    
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt,
+        config: {
+            systemInstruction,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    score: { type: Type.NUMBER },
+                    rationale: { type: Type.STRING },
+                    recommendation: { type: Type.STRING }
+                },
+                required: ["score", "rationale", "recommendation"]
+            }
+        }
+    });
+    return JSON.parse(response.text.trim());
+};
+
 export const analyzeDeforestation = async (coords: Coords, language: string = 'en'): Promise<DeforestationAnalysis> => {
     const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',

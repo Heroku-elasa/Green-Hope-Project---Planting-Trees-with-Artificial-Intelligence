@@ -33,6 +33,7 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
     { page: 'team', labelKey: 'nav.team' },
     { page: 'docs', labelKey: 'nav.docs' },
     { page: 'api-test', labelKey: 'nav.apiTest' },
+    { page: 'landEstimation', labelKey: 'nav.landEstimation' },
   ];
   
   const handleLanguageChange = (lang: 'en' | 'fa') => {
@@ -60,35 +61,46 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
   }, []);
 
   return (
-    <header className="bg-slate-900/80 backdrop-blur-sm sticky top-0 z-40 w-full border-b border-slate-700/50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="bg-slate-950/90 backdrop-blur-xl sticky top-0 z-50 w-full border-b border-white/5 shadow-2xl transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
           <div className="flex items-center">
-            <button onClick={() => handleNavClick('home')} className="flex-shrink-0 text-2xl font-bold tracking-tight text-white bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 text-transparent bg-clip-text">
-              Green Hope Project
+            <button 
+              onClick={() => handleNavClick('home')} 
+              className="flex-shrink-0 flex items-center space-x-3 group"
+            >
+              <div className="w-10 h-10 bg-gradient-to-tr from-pink-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+              </div>
+              <span className="text-xl font-black tracking-tighter text-white bg-gradient-to-r from-white via-white to-white/50 bg-clip-text">
+                Green Hope
+              </span>
             </button>
-            <nav className="hidden md:flex md:ml-10 md:space-x-8">
+            <nav className="hidden xl:flex ml-12 items-center space-x-1">
               {navItems.map(item => (
                 <button
                   key={item.page}
                   onClick={() => handleNavClick(item.page)}
-                  className={`text-sm font-medium transition-colors hover:text-pink-400 ${currentPage === item.page ? 'text-pink-400' : 'text-gray-300'}`}
+                  className={`px-4 py-2 text-sm font-bold rounded-lg transition-all duration-200 ${
+                    currentPage === item.page 
+                      ? 'bg-white/10 text-pink-400' 
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
                 >
                   {t(item.labelKey)}
                 </button>
               ))}
             </nav>
           </div>
-          <div className="flex items-center">
-             <button onClick={onSearchClick} className="p-2 rounded-full text-gray-400 hover:bg-slate-700 hover:text-white mr-2" aria-label="Search">
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+          <div className="flex items-center space-x-4">
+            <div className="hidden lg:flex items-center bg-slate-900 rounded-full p-1 border border-white/5">
+                <button onClick={() => handleLanguageChange('en')} className={`px-3 py-1 text-xs font-black rounded-full transition-all ${language === 'en' ? 'bg-pink-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>EN</button>
+                <button onClick={() => handleLanguageChange('fa')} className={`px-3 py-1 text-xs font-black rounded-full transition-all ${language === 'fa' ? 'bg-pink-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>FA</button>
+            </div>
+            
+            <button onClick={onSearchClick} className="p-2.5 bg-slate-900 text-slate-400 hover:text-white rounded-xl border border-white/5 hover:border-white/10 transition-all shadow-lg">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
-             <div className="flex items-center space-x-2 text-sm mr-4">
-                <button onClick={() => handleLanguageChange('en')} className={`px-2 py-1 rounded ${language === 'en' ? 'bg-pink-500/30 text-pink-300' : 'text-gray-400 hover:bg-slate-700'}`}>EN</button>
-                <button onClick={() => handleLanguageChange('fa')} className={`px-2 py-1 rounded ${language === 'fa' ? 'bg-pink-500/30 text-pink-300' : 'text-gray-400 hover:bg-slate-700'}`}>FA</button>
-             </div>
 
              <div className="hidden md:block">
                 {user ? (

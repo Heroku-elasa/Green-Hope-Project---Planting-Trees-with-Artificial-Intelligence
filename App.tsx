@@ -14,6 +14,7 @@ import TeamPage from './components/TeamPage';
 import FunctionDocsPage from './components/FunctionDocsPage';
 import BlogGenerator from './components/BlogGenerator';
 import CompostingPage from './components/CompostingPage';
+import LandEstimationPage from './components/LandEstimationPage';
 import Marketplace from './components/Marketplace';
 import ApiTest from './ApiTest';
 import AdminPanel from './components/admin/AdminPanel';
@@ -573,6 +574,7 @@ const App: React.FC = () => {
             case 'imageEditor': return <ImageEditor originalImage={originalImage} setOriginalImage={setOriginalImage} editedImage={editedImage} editPrompt={editPrompt} setEditPrompt={setEditPrompt} onEditImage={handleEditImage} isEditing={isEditingImage} error={error} />;
             case 'blog': return <BlogGenerator />;
             case 'composting': return <CompostingPage />;
+            case 'landEstimation': return <LandEstimationPage />;
             case 'marketplace': return <Marketplace />;
             case 'investment': return <Marketplace />;
             case 'aiAssistant': return <ProgressTracker data={progressData} onSetSoberStartDate={handleSetSoberStartDate} onAddGoal={handleAddGoal} onToggleGoal={handleToggleGoal} onDeleteGoal={handleDeleteGoal} onDailyCheckin={handleDailyCheckin} />;

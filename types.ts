@@ -18,7 +18,25 @@ const translations: Record<string, any> = {
       docs: "Function Docs",
       apiTest: "API Test",
       marketplace: "Marketplace",
-      investment: "Investment"
+      investment: "Investment",
+      landEstimation: "Land Value Estimator"
+    },
+    landEstimation: {
+      title: "AI Land Value Estimator",
+      subtitle: "Evaluate land potential based on environmental, financial, and family-oriented targets.",
+      form: {
+        location: "Location / Coordinates",
+        environmentalTarget: "Environmental Goal (e.g., Reforestation, Soil Health)",
+        financialTarget: "Financial Budget / ROI Target",
+        familyTarget: "Family Needs (e.g., Recreation, Heritage)",
+        button: "Estimate Value"
+      },
+      results: {
+        title: "Estimation Result",
+        score: "Land Score",
+        rationale: "Rationale",
+        recommendation: "AI Recommendation"
+      }
     },
     hero: {
         title: "Planting a Greener Tomorrow<br/> with Artificial Intelligence",
@@ -565,7 +583,27 @@ const translations: Record<string, any> = {
       aiAssistant: "دستیار هوشمند",
       projects: "پروژه ها", 
       team: "تیم", 
-      docs: "مستندات" 
+      apiTest: "تست API",
+      marketplace: "بازارچه",
+      investment: "سرمایه‌گذاری",
+      landEstimation: "تخمین ارزش زمین"
+    },
+    landEstimation: {
+      title: "تخمین‌گر هوشمند ارزش زمین",
+      subtitle: "ارزیابی پتانسیل زمین بر اساس اهداف محیط‌زیستی، مالی و خانوادگی.",
+      form: {
+        location: "موقعیت / مختصات",
+        environmentalTarget: "هدف محیط‌زیستی (مثلاً احیای جنگل، سلامت خاک)",
+        financialTarget: "بودجه مالی / هدف بازگشت سرمایه",
+        familyTarget: "نیازهای خانوادگی (مثلاً تفریح، میراث)",
+        button: "تخمین ارزش"
+      },
+      results: {
+        title: "نتیجه تخمین",
+        score: "امتیاز زمین",
+        rationale: "دلیل ارزیابی",
+        recommendation: "پیشنهاد هوش مصنوعی"
+      }
     },
     hero: {
         title: "کاشت فردایی سبزتر<br/> با هوش مصنوعی",
@@ -1172,7 +1210,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 };
 
 // --- App State ---
-export type Page = 'home' | 'projects' | 'team' | 'docs' | 'generator' | 'grant' | 'siteSelector' | 'video' | 'blog' | 'imageEditor' | 'composting' | 'aiAssistant' | 'marketplace' | 'investment';
+export type Page = 'home' | 'projects' | 'team' | 'docs' | 'generator' | 'grant' | 'siteSelector' | 'video' | 'blog' | 'imageEditor' | 'composting' | 'aiAssistant' | 'marketplace' | 'investment' | 'landEstimation';
 
 export interface AppState {
   page: Page;
