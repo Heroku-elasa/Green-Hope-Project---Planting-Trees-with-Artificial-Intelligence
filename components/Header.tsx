@@ -193,7 +193,6 @@ const Header: React.FC<HeaderProps> = ({ setPage, currentPage, user, onLogout, o
         </nav>
       )}
     </header>
-    </header>
   );
 };
 
